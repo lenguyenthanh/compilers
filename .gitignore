@@ -1,0 +1,7 @@
+.bsp
+.metals
+.npmrc
+.scala
+*.js
+*.js.map
+.scala-build
