@@ -1,6 +1,7 @@
 //> using scala "3.1.2"
 //> using lib "org.typelevel::cats-core:2.7.0"
 //> using lib "org.typelevel::cats-parse:0.3.7"
+import cats.data.NonEmptyList
 
 case class Location(val line: Int, val col: Int, val offset: Int)
 case class Info(start: Location, end: Location):
@@ -80,11 +81,16 @@ object Parser:
   import cats.Functor
   import cats.Monad
 
+  def unit[A, B](b: B): Parser[A, B] = new Parser[A, B] {
+    def parse(input: List[A]) = Right(input, b)
+  }
+
   given [A]: Functor[[x] =>> Parser[A, x]] with
-    def map[B, C](p: Parser[A, B])(f: B => C): Parser[A, C] = new Parser[A, C] {
-      def parse(input: List[A]) =
-        p.parse(input).map { case (rest, a) => (rest, f(a)) }
-    }
+    def map[B, C](p: Parser[A, B])(f: B => C): Parser[A, C] =
+      new Parser[A, C] {
+        def parse(input: List[A]) =
+          p.parse(input).map { case (rest, a) => (rest, f(a)) }
+      }
 
   given [A]: Monad[[x] =>> Parser[A, x]] = new Monad[[x] =>> Parser[A, x]] {
 
@@ -107,6 +113,16 @@ object Parser:
     }
   }
 
+  import cats.instances.all.*
+  import cats.syntax.all.*
+  extension [A, B](p: Parser[A, B])
+    def many: Parser[A, List[B]] = many1.map(_.toList) | Parser.unit[A, List[B]](Nil)
+    def many1: Parser[A, NonEmptyList[B]] =
+      for
+        first <- p
+        rest  <- p.many
+      yield NonEmptyList(first, rest)
+
 object Parser1:
   import scala.reflect.Typeable
 
@@ -119,7 +135,12 @@ object Parser1:
   enum Term(val info: Info):
     case TMVar(override val info: Info, val name: String)               extends Term(info)
     case TMAbs(override val info: Info, val arg: TMVar, val term: Term) extends Term(info)
-    case TMApp(override val info: Info, val t1: Term, val t2: Term)     extends Term(info)
+    case TMApp(override val info: Info, val ts: List[Term])             extends Term(info)
+
+    override def toString(): String = this match
+      case TMVar(_, name)      => name
+      case TMAbs(_, arg, term) => s"λ$arg. $term"
+      case TMApp(_, ts)        => ts.mkString(" ")
 
   def test[T: Typeable](token: Token): Boolean =
     token match
@@ -128,7 +149,7 @@ object Parser1:
 
   def token[T: Typeable]: Parser[Token, T] = new Parser[Token, T] {
     def parse(input: List[Token]): Either[String, (List[Token], T)] =
-      println(s"token $input")
+      // println(s"token ${input.length}")
       input match
         case head :: tail =>
           head match
@@ -138,30 +159,31 @@ object Parser1:
   }
 
   import Term.*
-  def term: Parser[Token, Term]           = lambda | group | variable | app
+  def term: Parser[Token, Term]           = lambda | group | app | variable
   def termWithoutApp: Parser[Token, Term] = lambda | group | variable
   lazy val variable: Parser[Token, TMVar] =
-    println("variable")
     token[Identifier].map(id => TMVar(id.info, id.lexeme))
 
   lazy val lambda: Parser[Token, Term] =
-    println("lambda")
     for
       l <- token[Lambda]
-      _ = println(l)
+      // _ = println(l)
       id <- variable
-      _ = println(id)
+      // _ = println(id)
       _ <- token[Dot]
       t <- term
-      _ = println(t)
+    // _ = println(t)
     yield TMAbs(l.info.merge(t.info), id, t)
 
-  lazy val app =
-    println("app")
-    for
-      t1 <- termWithoutApp
-      t2 <- termWithoutApp
-    yield TMApp(t1.info.merge(t2.info), t1, t2)
+  lazy val app = termWithoutApp.many1.map(ts => TMApp(mergeInfo(ts), ts.toList))
+  def mergeInfo(ts: NonEmptyList[Term]): Info =
+    ts.foldLeft(ts.head.info)((a, b) => a.merge(b.info))
+
+  // println("app")
+  // for
+  //   t1 <- termWithoutApp
+  //   t2 <- termWithoutApp
+  // yield TMApp(t1.info.merge(t2.info), t1, t2)
 
   lazy val group =
     for
@@ -230,13 +252,16 @@ object Evaluation:
 def main =
   import Term.*
   import Evaluation.*
-  val x = "\\x. \\y. y"
+  // val x = "\\x. \\y. y"
   // val x  = "\\x. x"
   // val x = "x \\x."
+  val x = "\\a. \\b. \\s. \\z. a s (b s z)"
   val t = for
     ts <- Lexer.scan(x)
-    t  <- Parser1.parse(ts)
+    _ = println(s"ts: ${ts.length}")
+    t <- Parser1.parse(ts)
   yield t
+  println()
   println(t)
   // (λ.1 0 2) (λ.0) -> 0 (λ.0) 1
   // val t = TMApp(
