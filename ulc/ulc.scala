@@ -13,14 +13,6 @@ case class Info(start: Location, end: Location):
   def merge(other: Info): Info =
     this.copy(end = other.end)
 
-enum Token(val lexeme: String, val info: Info):
-  case LeftParen(override val info: Info)  extends Token("(", info)
-  case RightParen(override val info: Info) extends Token(")", info)
-  case Lambda(override val info: Info)     extends Token("\\", info)
-  // case Assign(override val info: Info) extends Token("=", info)
-  case Dot(override val info: Info)                                     extends Token(".", info)
-  case Identifier(override val lexeme: String, override val info: Info) extends Token(lexeme, info)
-
 type NameBinding = Unit
 type Context     = List[(String, NameBinding)]
 
@@ -38,6 +30,15 @@ enum Term(val info: Info):
 object Lexer:
   import cats.parse.{ Caret, LocationMap, Numbers as N, Parser as P, Parser0 as P0, Rfc5234 as R }
   import Token.*
+
+  enum Token(val lexeme: String, val info: Info):
+    case LeftParen(override val info: Info)  extends Token("(", info)
+    case RightParen(override val info: Info) extends Token(")", info)
+    case Lambda(override val info: Info)     extends Token("\\", info)
+    // case Assign(override val info: Info) extends Token("=", info)
+    case Dot(override val info: Info)                                     extends Token(".", info)
+    case Identifier(override val lexeme: String, override val info: Info) extends Token(lexeme, info)
+
   val endOfLine: P[Unit]    = R.cr | R.lf
   val whitespaces: P0[Unit] = P.until0(!R.wsp).void
   val location              = P.caret.map(c => Location(c.line, c.col, c.offset))
@@ -74,10 +75,11 @@ object Lexer:
 object Parser:
   import scala.reflect.Typeable
 
-  import Token.*
-  import Term.*
   import parser.Parser as P
   import parser.Parser.given
+  import Lexer.Token.*
+  import Lexer.Token
+  import Term.*
 
   enum Term(val info: Info):
     case Var(override val info: Info, val name: String)            extends Term(info)
@@ -96,16 +98,7 @@ object Parser:
       case _: T => true
       case _    => false
 
-  def token[T: Typeable]: P[Token, T] = new P[Token, T] {
-    def parse(input: List[Token]): Either[String, (List[Token], T)] =
-      // println(s"token ${input.length}")
-      input match
-        case head :: tail =>
-          head match
-            case t: T => Right(tail, t)
-            case _    => Left("unexpected token")
-        case _ => Left("Empty input")
-  }
+  def token[T: Typeable] = P.withFilter[Token](test)
 
   def term: P[Token, Term]           = lambda | group | app | variable
   def termWithoutApp: P[Token, Term] = lambda | group | variable
@@ -115,12 +108,9 @@ object Parser:
   lazy val lambda: P[Token, Term] =
     for
       l <- token[Lambda]
-      // _ = println(l)
       id <- variable
-      // _ = println(id)
       _ <- token[Dot]
       t <- app
-    // _ = println(t)
     yield Abs(l.info.merge(t.info), id, t)
 
   lazy val app: P[Token, App] = termWithoutApp.many1.map(ts => App(mergeInfo(ts), ts.toList))

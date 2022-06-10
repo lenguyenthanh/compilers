@@ -25,6 +25,24 @@ object Parser:
     def parse(input: List[A]) = Right(input, b)
   }
 
+  def head[A]: Parser[A, A] = new Parser[A, A] {
+    def parse(input: List[A]) =
+      input match
+        case head::tail => Right(tail, head)
+        case _ => Left("Empty input")
+  }
+
+  def withFilter[A](filter: A => Boolean): Parser[A, A] = new Parser[A, A] {
+    def parse(input: List[A]): Either[String, (List[A], A)] =
+      input match
+        case head :: tail =>
+          if filter(head) then
+            Right(tail, head)
+          else
+            Left("unexpected token")
+        case _ => Left("Empty input")
+  }
+
   given [A]: Functor[[x] =>> Parser[A, x]] with
     def map[B, C](p: Parser[A, B])(f: B => C): Parser[A, C] =
       new Parser[A, C] {
@@ -43,7 +61,7 @@ object Parser:
         p.parse(input).flatMap((rest, b) => f(b).parse(rest))
     }
 
-    // @tailrec is this a hack
+    // @tailrec todo do we need tailrec? is this a hack?
     def tailRecM[B, C](b: B)(f: B => Parser[A, Either[B, C]]): Parser[A, C] = new Parser[A, C] {
       def parse(input: List[A]) =
         f(b).parse(input) match

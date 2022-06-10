@@ -22,4 +22,3 @@ The core part (evaluation) is a direct copy/paste from chapter 9 of the book [Ty
 
         Lexer            Parser            Name removing (de Bruijn indices)                  Evaluator           Pretty printer
 String ======> [Token] ======> Parsed AST ===================================> nameless AST  ===========> result ================> String
-

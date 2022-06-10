@@ -15,10 +15,21 @@ class UlcSuite extends munit.FunSuite:
     "\\a. \\b. \\s. \\z. a s (b s z)",
     "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
   )
+
+  test("Lexer") {
+    val result = input.traverse(Lexer.scan)
+    assert(result.isRight, true)
+  }
+
   test("Parser") {
     val result = input.traverse(parse)
-    println(result)
     assert(result.isRight, true)
+  }
+
+  test("Parser fails") {
+    val input = "\\x \\y. y"
+    val result = parse(input)
+    assert(result.isLeft, true)
   }
 
   def parse(x: String) =
