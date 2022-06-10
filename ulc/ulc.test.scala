@@ -11,7 +11,7 @@ class UlcSuite extends munit.FunSuite:
   val input = List(
     "\\x. \\y. y",
     "\\x. x",
-    // "x \\x.",
+    "x \\x. x",
     "\\a. \\b. \\s. \\z. a s (b s z)",
     "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
   )
@@ -23,6 +23,7 @@ class UlcSuite extends munit.FunSuite:
 
   test("Parser") {
     val result = input.traverse(parse)
+    println(result)
     assert(result.isRight, true)
   }
 

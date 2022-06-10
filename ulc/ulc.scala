@@ -83,15 +83,13 @@ object Parser:
 
   enum Term(val info: Info):
     case Var(override val info: Info, val name: String)            extends Term(info)
-    case Abs(override val info: Info, val arg: Var, val term: App) extends Term(info)
-    case App(override val info: Info, val ts: List[Term])          extends Term(info)
-    case Group(override val info: Info, val term: Term)            extends Term(info)
+    case Abs(override val info: Info, val arg: Var, val term: Term) extends Term(info)
+    case App(override val info: Info, val t1: Term, val t2: Term) extends Term(info)
 
     override def toString(): String = this match
       case Var(_, name)      => name
       case Abs(_, arg, term) => s"λ$arg. $term"
-      case App(_, ts)        => ts.mkString(" ")
-      case Group(_, t)       => s"($t)"
+      case App(_, t1, t2)       => s"($t1 $t2)"
 
   def test[T: Typeable](token: Token): Boolean =
     token match
@@ -100,30 +98,37 @@ object Parser:
 
   def token[T: Typeable] = P.withFilter[Token](test)
 
-  def term: P[Token, Term]           = lambda | group | app | variable
+  def term: P[Token, Term]           = lambda | group | app
   def termWithoutApp: P[Token, Term] = lambda | group | variable
+
   lazy val variable: P[Token, Var] =
     token[Identifier].map(id => Var(id.info, id.lexeme))
 
   lazy val lambda: P[Token, Term] =
     for
-      l <- token[Lambda]
+      l  <- token[Lambda]
       id <- variable
-      _ <- token[Dot]
-      t <- app
+      _  <- token[Dot]
+      t  <- app
     yield Abs(l.info.merge(t.info), id, t)
 
-  lazy val app: P[Token, App] = termWithoutApp.many1.map(ts => App(mergeInfo(ts), ts.toList))
+  lazy val app: P[Token, Term] = termWithoutApp.many1.map(collapse)
+
+  def collapse(ts: NonEmptyList[Term]): Term =
+    ts match
+      case NonEmptyList(head, Nil) => head
+      case NonEmptyList(head, x::Nil) => App(head.info.merge(x.info), head, x)
+      case NonEmptyList(head, x::y::xs) => App(mergeInfo(ts), App(head.info.merge(x.info), head, x), collapse(NonEmptyList(y, xs)))
 
   def mergeInfo(ts: NonEmptyList[Term]): Info =
     ts.foldLeft(ts.head.info)((a, b) => a.merge(b.info))
 
   lazy val group =
     for
-      s <- token[LeftParen]
+      _ <- token[LeftParen]
       t <- term
-      e <- token[RightParen]
-    yield Group(s.info.merge(e.info), t)
+      _ <- token[RightParen]
+    yield t
 
   def parse(tokens: List[Token]): Either[String, Term] =
     term.parse(tokens) match

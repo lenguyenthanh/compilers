@@ -39,7 +39,7 @@ object Parser:
           if filter(head) then
             Right(tail, head)
           else
-            Left("unexpected token")
+            Left(s"unexpected token $head")
         case _ => Left("Empty input")
   }
 
@@ -78,4 +78,3 @@ object Parser:
         first <- p
         rest  <- p.many
       yield NonEmptyList(first, rest)
-
