@@ -4,6 +4,10 @@
 
 package ulc
 
+import cats.instances.all.*
+import cats.syntax.all.*
+import cats.data.NonEmptyList
+
 case class Location(val line: Int, val col: Int, val offset: Int)
 case class Info(start: Location, end: Location):
   def merge(other: Info): Info =
@@ -67,72 +71,13 @@ object Lexer:
   extension [T](p: P[T])
     def info: P[(T, Info)] = (location.with1 ~ p ~ location).map { case ((s, t), e) => (t, Info(s, e)) }
 
-trait Parser[A, +B]:
-  def parse(input: List[A]): Either[String, (List[A], B)]
-
-  def |[B1 >: B](that: Parser[A, B1]): Parser[A, B1] = new Parser[A, B1] {
-    def parse(input: List[A]) =
-      Parser.this.parse(input) match
-        case Left(_)         => that.parse(input)
-        case r @ Right(_, _) => r
-  }
-
 object Parser:
-
-  import cats.Functor
-  import cats.Monad
-
-  def unit[A, B](b: B): Parser[A, B] = new Parser[A, B] {
-    def parse(input: List[A]) = Right(input, b)
-  }
-
-  given [A]: Functor[[x] =>> Parser[A, x]] with
-    def map[B, C](p: Parser[A, B])(f: B => C): Parser[A, C] =
-      new Parser[A, C] {
-        def parse(input: List[A]) =
-          p.parse(input).map { case (rest, a) => (rest, f(a)) }
-      }
-
-  given [A]: Monad[[x] =>> Parser[A, x]] = new Monad[[x] =>> Parser[A, x]] {
-
-    def pure[B](b: B): Parser[A, B] = new Parser[A, B] {
-      def parse(input: List[A]) = Right(input, b)
-    }
-
-    def flatMap[B, C](p: Parser[A, B])(f: B => Parser[A, C]): Parser[A, C] = new Parser[A, C] {
-      def parse(input: List[A]) =
-        p.parse(input).flatMap((rest, b) => f(b).parse(rest))
-    }
-
-    // @tailrec is this a hack
-    def tailRecM[B, C](b: B)(f: B => Parser[A, Either[B, C]]): Parser[A, C] = new Parser[A, C] {
-      def parse(input: List[A]) =
-        f(b).parse(input) match
-          case Left(err)               => Left(err)
-          case Right((rest, Right(c))) => Right(rest, c)
-          case Right((rest, Left(b1))) => tailRecM(b1)(f).parse(rest)
-    }
-  }
-
-  import cats.instances.all.*
-  import cats.syntax.all.*
-  import cats.data.NonEmptyList
-  extension [A, B](p: Parser[A, B])
-    def many: Parser[A, List[B]] = many1.map(_.toList) | Parser.unit[A, List[B]](Nil)
-    def many1: Parser[A, NonEmptyList[B]] =
-      for
-        first <- p
-        rest  <- p.many
-      yield NonEmptyList(first, rest)
-
-object Parser1:
   import scala.reflect.Typeable
 
   import Token.*
-  import Parser.*
-  import Parser.given
-  import cats.instances.all.*
-  import cats.syntax.all.*
+  import Term.*
+  import parser.Parser as P
+  import parser.Parser.given
 
   enum Term(val info: Info):
     case Var(override val info: Info, val name: String)            extends Term(info)
@@ -151,7 +96,7 @@ object Parser1:
       case _: T => true
       case _    => false
 
-  def token[T: Typeable]: Parser[Token, T] = new Parser[Token, T] {
+  def token[T: Typeable]: P[Token, T] = new P[Token, T] {
     def parse(input: List[Token]): Either[String, (List[Token], T)] =
       // println(s"token ${input.length}")
       input match
@@ -162,14 +107,12 @@ object Parser1:
         case _ => Left("Empty input")
   }
 
-  import Term.*
-  import cats.data.NonEmptyList
-  def term: Parser[Token, Term]           = lambda | group | app | variable
-  def termWithoutApp: Parser[Token, Term] = lambda | group | variable
-  lazy val variable: Parser[Token, Var] =
+  def term: P[Token, Term]           = lambda | group | app | variable
+  def termWithoutApp: P[Token, Term] = lambda | group | variable
+  lazy val variable: P[Token, Var] =
     token[Identifier].map(id => Var(id.info, id.lexeme))
 
-  lazy val lambda: Parser[Token, Term] =
+  lazy val lambda: P[Token, Term] =
     for
       l <- token[Lambda]
       // _ = println(l)
@@ -177,19 +120,13 @@ object Parser1:
       // _ = println(id)
       _ <- token[Dot]
       t <- app
-      // _ = println(t)
+    // _ = println(t)
     yield Abs(l.info.merge(t.info), id, t)
 
-  lazy val app: Parser[Token, App] = termWithoutApp.many1.map(ts => App(mergeInfo(ts), ts.toList))
+  lazy val app: P[Token, App] = termWithoutApp.many1.map(ts => App(mergeInfo(ts), ts.toList))
 
   def mergeInfo(ts: NonEmptyList[Term]): Info =
     ts.foldLeft(ts.head.info)((a, b) => a.merge(b.info))
-
-  // println("app")
-  // for
-  //   t1 <- termWithoutApp
-  //   t2 <- termWithoutApp
-  // yield TMApp(t1.info.merge(t2.info), t1, t2)
 
   lazy val group =
     for
@@ -253,29 +190,3 @@ object Evaluation:
     t1 match
       case (t, false) => eval(t)
       case (t, true)  => t
-
-@main
-def main =
-  import Term.*
-  import Evaluation.*
-  val x = "\\x. \\y. y"
-  // val x  = "\\x. x"
-  // val x = "x \\x."
-  // val x = "\\a. \\b. \\s. \\z. a s (b s z)"
-  // val x = "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
-  val t = for
-    ts <- Lexer.scan(x)
-    // _ = println(s"ts: ${ts.mkString("\n")}")
-    _ = println(s"ts: ${ts.length}")
-    t <- Parser1.parse(ts)
-  yield t
-  println()
-  println(t)
-  // (λ.1 0 2) (λ.0) -> 0 (λ.0) 1
-  // val t = TMApp(
-  //   (),
-  //   TMAbs((), TMApp((), TMApp((), TMVar((), 1, 3), TMVar((), 0, 3)), TMVar((), 2, 3))),
-  //   TMAbs((), TMVar((), 0, 1))
-  // )
-  // println(t)
-  // println(eval(t))

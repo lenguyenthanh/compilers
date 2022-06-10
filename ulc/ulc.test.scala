@@ -23,6 +23,6 @@ class UlcSuite extends munit.FunSuite:
 
   def parse(x: String) =
     for
-      ts <- ulc.Lexer.scan(x)
-      t <- ulc.Parser1.parse(ts)
+      ts <- Lexer.scan(x)
+      t <- Parser.parse(ts)
     yield t
