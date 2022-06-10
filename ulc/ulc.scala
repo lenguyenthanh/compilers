@@ -16,16 +16,16 @@ case class Info(start: Location, end: Location):
 type NameBinding = Unit
 type Context     = List[(String, NameBinding)]
 
-enum Term(val info: Info):
-  case TMVar(override val info: Info, val index: Int, total: Int) extends Term(info)
-  case TMAbs(override val info: Info, val term: Term)             extends Term(info)
-  case TMApp(override val info: Info, val t1: Term, val t2: Term) extends Term(info)
+enum BTerm(val info: Info):
+  case BVar(override val info: Info, val index: Int, total: Int) extends BTerm(info)
+  case BAbs(override val info: Info, val term: BTerm)             extends BTerm(info)
+  case BApp(override val info: Info, val t1: BTerm, val t2: BTerm) extends BTerm(info)
 
   override def toString(): String =
     this match
-      case TMVar(_, index, total) => s"#$index"
-      case TMAbs(_, t)            => s"λ.$t"
-      case TMApp(_, t1, t2)       => s"($t1 $t2)"
+      case BVar(_, index, total) => s"#$index"
+      case BAbs(_, t)            => s"λ.$t"
+      case BApp(_, t1, t2)       => s"($t1 $t2)"
 
 object Lexer:
   import cats.parse.{ Caret, LocationMap, Numbers as N, Parser as P, Parser0 as P0, Rfc5234 as R }
@@ -136,21 +136,44 @@ object Parser:
       case Right((Nil, term)) => Right(term)
       case _                  => Left("Partial Parse")
 
+object DeBruijn:
+  import BTerm.*
+  import Parser.Term.*
+  import Parser.Term
+
+  def lam2db: Term => Either[String, BTerm] =
+    def go(ctx: List[String]): Term => Either[String, BTerm] =
+      case Var(fi, x) =>
+        val idx =  ctx.indexOf(x)
+        if idx == -1 then
+          Left("Undeclared variable: $x")
+        else
+          Right(BVar(fi, idx, idx))
+      case Abs(fi, x, t) =>
+        go(x.name::ctx)(t).map(BAbs(fi, _))
+      case App(fi, t1, t2) =>
+        for
+          t11 <- go(ctx)(t1)
+          t22 <- go(ctx)(t2)
+        yield BApp(fi, t11, t22)
+    go(Nil)
+
 object Evaluation:
-  import Term.*
+  import BTerm as Term
+  import BTerm.*
 
   def termShift(d: Int): Term => Term = termShift(d, 0)
 
   // the shift operator ↑ d c for term t
   def termShift(d: Int, c: Int): Term => Term =
-    def onVar(v: TMVar, c: Int): TMVar =
+    def onVar(v: BVar, c: Int): BVar =
       if v.index >= c then v.copy(index = v.index + d, total = v.total + d)
       else v.copy(total = v.total + d)
     map(onVar, c)
 
   // The substitution [j ↦ s] t of term s for numbered j in term t
   def termSubst(j: Int, s: Term): Term => Term =
-    def onVar(v: TMVar, c: Int): Term =
+    def onVar(v: BVar, c: Int): Term =
       if v.index == j + c then termShift(c)(s)
       else v
     map(onVar, 0)
@@ -158,26 +181,26 @@ object Evaluation:
   def termSubstTop(s: Term): Term => Term =
     (termSubst(0, termShift(1)(s))) andThen termShift(-1)
 
-  def map(onVar: (TMVar, Int) => Term, c: Int)(term: Term): Term =
-    def walk(onVar: (TMVar, Int) => Term, c: Int, t: Term): Term =
+  def map(onVar: (BVar, Int) => Term, c: Int)(term: Term): Term =
+    def walk(onVar: (BVar, Int) => Term, c: Int, t: Term): Term =
       t match
-        case t @ TMVar(_, _, _) => onVar(t, c)
-        case TMAbs(fi, t1)      => TMAbs(fi, walk(onVar, c + 1, t1))
-        case TMApp(fi, t1, t2)  => TMApp(fi, walk(onVar, c, t1), walk(onVar, c, t2))
+        case t @ BVar(_, _, _) => onVar(t, c)
+        case BAbs(fi, t1)      => BAbs(fi, walk(onVar, c + 1, t1))
+        case BApp(fi, t1, t2)  => BApp(fi, walk(onVar, c, t1), walk(onVar, c, t2))
     walk(onVar, c, term)
 
   def isVal: Term => Boolean =
-    case TMAbs(_, _) => true
+    case BAbs(_, _) => true
     case _           => false
 
   def eval1(term: Term): (Term, Boolean) =
     term match
-      case TMApp(fi, TMAbs(_, t12), v2) if isVal(v2) =>
+      case BApp(fi, BAbs(_, t12), v2) if isVal(v2) =>
         (termSubstTop(v2)(t12), false)
-      case TMApp(fi, v1, t2) if isVal(v1) =>
-        (TMApp(fi, v1, eval1(t2)._1), false)
-      case TMApp(fi, t1, v2) if isVal(v2) =>
-        (TMApp(fi, eval1(t1)._1, v2), false)
+      case BApp(fi, v1, t2) if isVal(v1) =>
+        (BApp(fi, v1, eval1(t2)._1), false)
+      case BApp(fi, t1, v2) if isVal(v2) =>
+        (BApp(fi, eval1(t1)._1, v2), false)
       case _ => (term, true)
 
   def eval(term: Term): Term =

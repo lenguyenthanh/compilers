@@ -11,7 +11,6 @@ class UlcSuite extends munit.FunSuite:
   val input = List(
     "\\x. \\y. y",
     "\\x. x",
-    "x \\x. x",
     "\\a. \\b. \\s. \\z. a s (b s z)",
     "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
   )
@@ -23,7 +22,6 @@ class UlcSuite extends munit.FunSuite:
 
   test("Parser") {
     val result = input.traverse(parse)
-    println(result)
     assert(result.isRight, true)
   }
 
@@ -33,8 +31,25 @@ class UlcSuite extends munit.FunSuite:
     assert(result.isLeft, true)
   }
 
+  test("de bruijn") {
+    val result = input.traverse(deBruijn)
+    assert(result.isRight, true)
+  }
+
+  test("de bruijn fails") {
+    val result = deBruijn("x \\x. x")
+    assert(result.isLeft, true)
+  }
+
   def parse(x: String) =
     for
       ts <- Lexer.scan(x)
       t <- Parser.parse(ts)
     yield t
+
+  def deBruijn(x: String) =
+    for
+      ts <- Lexer.scan(x)
+      t <- Parser.parse(ts)
+      br <- DeBruijn.lam2db(t)
+    yield br
