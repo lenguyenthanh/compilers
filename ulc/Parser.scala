@@ -28,18 +28,16 @@ object Parser:
   def head[A]: Parser[A, A] = new Parser[A, A] {
     def parse(input: List[A]) =
       input match
-        case head::tail => Right(tail, head)
-        case _ => Left("Empty input")
+        case head :: tail => Right(tail, head)
+        case _            => Left("Empty input")
   }
 
   def withFilter[A](filter: A => Boolean): Parser[A, A] = new Parser[A, A] {
     def parse(input: List[A]): Either[String, (List[A], A)] =
       input match
         case head :: tail =>
-          if filter(head) then
-            Right(tail, head)
-          else
-            Left(s"unexpected token $head")
+          if filter(head) then Right(tail, head)
+          else Left(s"unexpected token $head")
         case _ => Left("Empty input")
   }
 
