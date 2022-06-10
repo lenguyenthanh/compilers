@@ -12,12 +12,13 @@ import cats.data.NonEmptyList
 trait Parser[A, +B]:
   def parse(input: List[A]): Either[String, (List[A], B)]
 
-  def |[B1 >: B](that: Parser[A, B1]): Parser[A, B1] = new Parser[A, B1] {
+  def |[C](that: Parser[A, C]): Parser[A, B | C] = new Parser[A, B | C] {
     def parse(input: List[A]) =
       Parser.this.parse(input) match
         case Left(_)         => that.parse(input)
         case r @ Right(_, _) => r
   }
+
 
 object Parser:
 

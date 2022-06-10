@@ -9,6 +9,8 @@ import cats.syntax.all.*
 import cats.instances.all.*
 import cats.data.NonEmptyList
 
+type Env = Map[String, Parser.Term]
+
 case class Location(val line: Int, val col: Int, val offset: Int)
 case class Info(start: Location, end: Location):
   def merge(other: Info): Info =
@@ -32,6 +34,8 @@ object Lexer:
   enum Token(val lexeme: String, val info: Info):
     case LeftParen(override val info: Info)  extends Token("(", info)
     case RightParen(override val info: Info) extends Token(")", info)
+    case Assign(override val info: Info) extends Token("=", info)
+    case EndOfLine(override val info: Info) extends Token("\n", info)
     case Lambda(override val info: Info)     extends Token("\\", info)
     case Dot(override val info: Info)                                     extends Token(".", info)
     case Identifier(override val lexeme: String, override val info: Info) extends Token(lexeme, info)
@@ -43,6 +47,8 @@ object Lexer:
   // token
   val leftParen  = P.char('(').info.map(p => LeftParen(p._2))
   val rightParen = P.char(')').info.map(p => RightParen(p._2))
+  val assign = P.char('=').info.map(p => Assign(p._2))
+  val eol = endOfLine.info.map(p => EndOfLine(p._2))
   val lambda = (P.char('\\') | P.char('λ')).info.map(p => Lambda(p._2))
   val dot    = P.char('.').info.map(p => Dot(p._2))
 
@@ -50,7 +56,7 @@ object Lexer:
 
   val identifer = allow.rep.string.info.map(p => Identifier(p._1, p._2))
 
-  val token = (leftParen | rightParen | lambda | dot | identifer).surroundedBy(whitespaces) // | assign
+  val token = (leftParen | rightParen | assign | eol | lambda | dot | identifer).surroundedBy(whitespaces)
 
   val parser = token.rep.map(_.toList)
 
@@ -77,6 +83,7 @@ object Parser:
   import Lexer.Token
   import Term.*
 
+  case class Stmt(val info: Info, val name: String, term: Term)
   enum Term(val info: Info):
     case Var(override val info: Info, val name: String)            extends Term(info)
     case Abs(override val info: Info, val arg: Var, val term: Term) extends Term(info)
@@ -94,8 +101,8 @@ object Parser:
 
   def token[T: Typeable] = P.withFilter[Token](test)
 
-  def term: P[Token, Term]           = app
-  def termWithoutApp: P[Token, Term] = lambda | group | variable
+  lazy val term: P[Token, Term]           = app
+  lazy val termWithoutApp: P[Token, Term] = lambda | group | variable
 
   lazy val variable: P[Token, Var] =
     token[Identifier].map(id => Var(id.info, id.lexeme))
@@ -108,7 +115,24 @@ object Parser:
       t  <- app
     yield Abs(l.info.merge(t.info), id, t)
 
+  lazy val group =
+    for
+      _ <- token[LeftParen]
+      t <- term
+      _ <- token[RightParen]
+    yield t
+
   lazy val app: P[Token, Term] = termWithoutApp.many1.map(collapse)
+
+  lazy val stmt =
+    for
+      v <- variable
+      _ <- token[Assign]
+      t <- app
+      // eol <- token[EndOfLine]
+    yield Stmt(v.info.merge(t.info), v.name, t)
+
+  lazy val line: P[Token, Stmt | Term] = stmt | app
 
   def collapse(ts: NonEmptyList[Term]): Term =
     ts match
@@ -119,15 +143,8 @@ object Parser:
   def mergeInfo(ts: NonEmptyList[Term]): Info =
     ts.foldLeft(ts.head.info)((a, b) => a.merge(b.info))
 
-  lazy val group =
-    for
-      _ <- token[LeftParen]
-      t <- term
-      _ <- token[RightParen]
-    yield t
-
-  def parse(tokens: List[Token]): Either[String, Term] =
-    term.parse(tokens) match
+  def parse[B](p: P[Token, B])(tokens: List[Token]): Either[String, B] =
+    p.parse(tokens) match
       case Left(err)          => Left(err)
       case Right((Nil, term)) => Right(term)
       case _                  => Left("Partial Parse")
@@ -138,18 +155,21 @@ object DeBruijn:
   import Parser.Term
   import scala.collection.mutable.ListBuffer
 
-  def transform: Term => BTerm =
+  def transform(env: Env, free: List[String]): Term => BTerm =
     // TODO mutation doesn't work
-    val free = ListBuffer[String]()
+    val mFree = ListBuffer.from(free)
     def go(ctx: List[String]): Term => BTerm =
       case Var(fi, x) =>
         val idx =  ctx.indexOf(x)
         if idx == -1 then
-          val freeIdx = free.indexOf(x)
-          if freeIdx == -1 then
-            free += x
-            BVar(fi, free.length -1)
-          else BVar(fi, freeIdx)
+          env.get(x) match
+          case Some(term) => transform(env, mFree.toList)(term)
+          case None =>
+            val freeIdx = mFree.indexOf(x)
+            if freeIdx == -1 then
+              mFree += x
+              BVar(fi, free.length -1)
+            else BVar(fi, freeIdx)
         else
           BVar(fi, idx)
       case Abs(fi, x, t) =>
@@ -195,51 +215,81 @@ object Evaluation:
     case BAbs(_, _) => true
     case _           => false
 
-  def eval1(term: Term): (Term, Boolean) =
+  def eval1(env: Env, term: Term): (Term, Boolean) =
     term match
       case BApp(fi, BAbs(_, t12), v2) =>
         (termSubstTop(v2)(t12), false)
       // TODO fix - so ugly
       case BApp(fi, t1, t2) =>
-        val r1 = eval1(t1)
+        val r1 = eval1(env, t1)
         if r1._2 then
-          val r2 = eval1(t2)
+          val r2 = eval1(env, t2)
           (BApp(fi, r1._1, r2._1), r2._2)
         else
           (BApp(fi, r1._1, t2), r1._2)
       case BAbs(fi, t) =>
-        val r = eval1(t)
+        val r = eval1(env, t)
         (BAbs(fi, r._1), r._2)
       case _ => (term, true)
 
-  def eval(term: Term): Term =
-    val t1 = eval1(term)
+  def eval(env: Env, term: Term): Term =
+    val t1 = eval1(env, term)
     t1 match
       case (t, false) => eval(t)
       case (t, true)  => t
 
-object Interpreter:
+  def eval(term: Term): Term =
+    val t1 = eval1(Map.empty, term)
+    t1 match
+      case (t, false) => eval(t)
+      case (t, true)  => t
+
+class Interpreter:
+  import Parser.{Term, Stmt}
+  import scala.collection.mutable.Map
+
+  val env = Map[String, Term]()
+
   def eval(input: String): String =
     val r = for
       ts <- Lexer.scan(input)
-      _ = println(ts)
-      t <- Parser.parse(ts)
-      _ = println(t)
-      br = DeBruijn.transform(t)
-      _ = println(br)
-      result = Evaluation.eval(br)
-    yield result.toString
-    r.fold(identity, identity)
+      t <- Parser.parse(Parser.line)(ts)
+    yield t
+    r match
+      case Left(str) =>
+        s"Parse Error: $str"
+      case Right(l) =>
+        l match
+          case t: Term =>
+            val bTerm = DeBruijn.transform(env.toMap, Nil)(t)
+            Evaluation.eval(env.toMap, bTerm).toString
+          case Stmt(_, name, term) =>
+            env += (name -> term)
+            s"$name = $term"
 
-def loop() =
-    import scala.io.StdIn.readLine
-    val quitCommands = List("exit", "quit", ":q")
-    var input = ""
-    println("Welcome to ulc repl!")
-    println("Enter exit, quite or :q to quit")
-    while
-      input = readLine("λ> ")
-      quitCommands.indexOf(input) == -1
-    do println(Interpreter.eval(input))
+  // def eval(input: String): String =
+  //   val r = for
+  //     ts <- Lexer.scan(input)
+  //     t <- Parser.parse(Parser.app)(ts)
+  //     br = DeBruijn.transform(Map.empty, List())(t)
+  //     result = Evaluation.eval(br)
+  //   yield result.toString
+  //   r.fold(identity, identity)
 
-@main def main() = loop()
+def loop =
+  import scala.io.StdIn.readLine
+  import Parser.{Term, Stmt}
+
+  val interpreter = Interpreter()
+  val quitCommands = List("exit", "quit", ":q")
+  var input = ""
+
+  println("Welcome to ulc repl!")
+  println("Enter exit, quite or :q to quit")
+  while
+    input = readLine("λ> ")
+    quitCommands.indexOf(input) == -1
+  do
+    println(interpreter.eval(input))
+
+@main def main() = loop

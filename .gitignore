@@ -5,3 +5,5 @@
 *.js
 *.js.map
 .scala-build
+*.build_artifacts.txt
+bin

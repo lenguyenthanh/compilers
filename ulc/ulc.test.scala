@@ -19,6 +19,10 @@ class UlcSuite extends munit.FunSuite:
     "(\\n. \\f. \\x. f (n f x)) (\\f. \\x. x)"
   )
 
+  val stmt = List(
+    "y = \\x. x"
+    )
+
   test("Lexer") {
     val result = input.traverse(Lexer.scan)
     assert(result.isRight, true)
@@ -26,6 +30,11 @@ class UlcSuite extends munit.FunSuite:
 
   test("Parser") {
     val result = input.traverse(parse)
+    assert(result.isRight, true)
+  }
+
+  test("Parser with line") {
+    val result = stmt.traverse(lineParse)
     assert(result.isRight, true)
   }
 
@@ -47,16 +56,24 @@ class UlcSuite extends munit.FunSuite:
     assert(true, true)
   }
 
-
+  val lineParser = Parser.parse(Parser.line)
+  val termParser = Parser.parse(Parser.app)
   def parse(x: String) =
     for
       ts <- Lexer.scan(x)
-      t  <- Parser.parse(ts)
+      t  <- termParser(ts)
+    yield t
+
+  def lineParse(x: String) =
+    for
+      ts <- Lexer.scan(x)
+      _ = println(ts)
+      t  <- lineParser(ts)
     yield t
 
   def deBruijn(x: String) =
     for
       ts <- Lexer.scan(x)
-      t  <- Parser.parse(ts)
-      br = DeBruijn.transform(t)
+      t  <- termParser(ts)
+      br = DeBruijn.transform(Map.empty, List())(t)
     yield br

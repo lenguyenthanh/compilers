@@ -17,8 +17,15 @@ The core part (evaluation) is a direct copy/paste from chapter 9 of the book [Ty
   - Implementation
   - setup/run/tests
 - [ ] Some more tests
+- [ ] Load program from files
 
 ## Issues with free variables
+
+## variable lookup rule order
+
+- context
+- env
+- free
 
 ## Overview
 
