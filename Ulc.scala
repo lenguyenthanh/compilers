@@ -41,7 +41,7 @@ object Lexer:
   val leftParen  = P.char('(').info.map(p => LeftParen(p._2))
   val rightParen = P.char(')').info.map(p => RightParen(p._2))
   // val assign = P.char('=').info.map(p => Assign(p._2))
-  val lambda = P.char('\\').info.map(p => Lambda(p._2))
+  val lambda = (P.char('\\') | P.char('λ')).info.map(p => Lambda(p._2))
   val dot    = P.char('.').info.map(p => Dot(p._2))
 
   val allow = R.alpha | N.digit | P.charIn('!', '@', '#', '$', '%', '^', '&', '*', '_', '?', '<', '>')
@@ -133,14 +133,16 @@ object Parser1:
   import cats.syntax.all.*
 
   enum Term(val info: Info):
-    case TMVar(override val info: Info, val name: String)               extends Term(info)
-    case TMAbs(override val info: Info, val arg: TMVar, val term: Term) extends Term(info)
-    case TMApp(override val info: Info, val ts: List[Term])             extends Term(info)
+    case Var(override val info: Info, val name: String)            extends Term(info)
+    case Abs(override val info: Info, val arg: Var, val term: App) extends Term(info)
+    case App(override val info: Info, val ts: List[Term])          extends Term(info)
+    case Group(override val info: Info, val term: Term)            extends Term(info)
 
     override def toString(): String = this match
-      case TMVar(_, name)      => name
-      case TMAbs(_, arg, term) => s"λ$arg. $term"
-      case TMApp(_, ts)        => ts.mkString(" ")
+      case Var(_, name)      => name
+      case Abs(_, arg, term) => s"λ$arg. $term"
+      case App(_, ts)        => ts.mkString(" ")
+      case Group(_, t)       => s"($t)"
 
   def test[T: Typeable](token: Token): Boolean =
     token match
@@ -161,8 +163,8 @@ object Parser1:
   import Term.*
   def term: Parser[Token, Term]           = lambda | group | app | variable
   def termWithoutApp: Parser[Token, Term] = lambda | group | variable
-  lazy val variable: Parser[Token, TMVar] =
-    token[Identifier].map(id => TMVar(id.info, id.lexeme))
+  lazy val variable: Parser[Token, Var] =
+    token[Identifier].map(id => Var(id.info, id.lexeme))
 
   lazy val lambda: Parser[Token, Term] =
     for
@@ -171,11 +173,12 @@ object Parser1:
       id <- variable
       // _ = println(id)
       _ <- token[Dot]
-      t <- term
-    // _ = println(t)
-    yield TMAbs(l.info.merge(t.info), id, t)
+      t <- app
+      // _ = println(t)
+    yield Abs(l.info.merge(t.info), id, t)
 
-  lazy val app = termWithoutApp.many1.map(ts => TMApp(mergeInfo(ts), ts.toList))
+  lazy val app: Parser[Token, App] = termWithoutApp.many1.map(ts => App(mergeInfo(ts), ts.toList))
+
   def mergeInfo(ts: NonEmptyList[Term]): Info =
     ts.foldLeft(ts.head.info)((a, b) => a.merge(b.info))
 
@@ -187,10 +190,10 @@ object Parser1:
 
   lazy val group =
     for
-      _ <- token[LeftParen]
+      s <- token[LeftParen]
       t <- term
-      _ <- token[RightParen]
-    yield t
+      e <- token[RightParen]
+    yield Group(s.info.merge(e.info), t)
 
   def parse(tokens: List[Token]): Either[String, Term] =
     term.parse(tokens) match
@@ -252,12 +255,14 @@ object Evaluation:
 def main =
   import Term.*
   import Evaluation.*
-  // val x = "\\x. \\y. y"
+  val x = "\\x. \\y. y"
   // val x  = "\\x. x"
   // val x = "x \\x."
-  val x = "\\a. \\b. \\s. \\z. a s (b s z)"
+  // val x = "\\a. \\b. \\s. \\z. a s (b s z)"
+  // val x = "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
   val t = for
     ts <- Lexer.scan(x)
+    // _ = println(s"ts: ${ts.mkString("\n")}")
     _ = println(s"ts: ${ts.length}")
     t <- Parser1.parse(ts)
   yield t
