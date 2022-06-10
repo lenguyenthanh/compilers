@@ -9,12 +9,14 @@ import cats.instances.all.*
 
 class UlcSuite extends munit.FunSuite:
   val input = List(
-    "\\x. \\y. y",
-    "\\x. x",
-    "(\\x. x) x",
-    "(\\x. x x) x",
-    "\\a. \\b. \\s. \\z. a s (b s z)",
-    "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
+    // "\\x. \\y. y",
+    // "\\x. x",
+    // "(\\x. x) x",
+    // "(\\x. x x) x",
+    // "(\\x. \\y. x) a b",
+    // "\\a. \\b. \\s. \\z. a s (b s z)",
+    // "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
+    "(\\n. \\f. \\x. f (n f x)) (\\f. \\x. x)"
   )
 
   test("Lexer") {
@@ -38,6 +40,13 @@ class UlcSuite extends munit.FunSuite:
     println(result.mkString("\n"))
     assert(true, true)
   }
+
+  test("Evaluate") {
+    val result = input.map(Interpreter.eval)
+    println(result.mkString("\n"))
+    assert(true, true)
+  }
+
 
   def parse(x: String) =
     for

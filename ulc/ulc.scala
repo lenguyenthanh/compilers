@@ -22,7 +22,7 @@ enum BTerm(val info: Info):
   override def toString(): String =
     this match
       case BVar(_, index) => s"#$index"
-      case BAbs(_, t)            => s"λ.$t"
+      case BAbs(_, t)            => s"(λ.$t)"
       case BApp(_, t1, t2)       => s"($t1 $t2)"
 
 object Lexer:
@@ -136,13 +136,20 @@ object DeBruijn:
   import BTerm.*
   import Parser.Term.*
   import Parser.Term
+  import scala.collection.mutable.ListBuffer
 
   def transform: Term => BTerm =
+    // TODO mutation doesn't work
+    val free = ListBuffer[String]()
     def go(ctx: List[String]): Term => BTerm =
       case Var(fi, x) =>
         val idx =  ctx.indexOf(x)
         if idx == -1 then
-          BVar(fi, 0)
+          val freeIdx = free.indexOf(x)
+          if freeIdx == -1 then
+            free += x
+            BVar(fi, free.length -1)
+          else BVar(fi, freeIdx)
         else
           BVar(fi, idx)
       case Abs(fi, x, t) =>
@@ -192,12 +199,17 @@ object Evaluation:
     term match
       case BApp(fi, BAbs(_, t12), v2) =>
         (termSubstTop(v2)(t12), false)
-      case BApp(fi, v1, t2) if isVal(v1) =>
-        val result = eval1(t2)
-        (BApp(fi, v1, result._1), result._2)
-      case BApp(fi, t1, v2) if isVal(v2) =>
-        val result = eval1(t1)
-        (BApp(fi, result._1, v2), result._2)
+      // TODO fix - so ugly
+      case BApp(fi, t1, t2) =>
+        val r1 = eval1(t1)
+        if r1._2 then
+          val r2 = eval1(t2)
+          (BApp(fi, r1._1, r2._1), r2._2)
+        else
+          (BApp(fi, r1._1, t2), r1._2)
+      case BAbs(fi, t) =>
+        val r = eval1(t)
+        (BAbs(fi, r._1), r._2)
       case _ => (term, true)
 
   def eval(term: Term): Term =
@@ -210,8 +222,11 @@ object Interpreter:
   def eval(input: String): String =
     val r = for
       ts <- Lexer.scan(input)
+      _ = println(ts)
       t <- Parser.parse(ts)
+      _ = println(t)
       br = DeBruijn.transform(t)
+      _ = println(br)
       result = Evaluation.eval(br)
     yield result.toString
     r.fold(identity, identity)
@@ -220,7 +235,7 @@ def loop() =
     import scala.io.StdIn.readLine
     val quitCommands = List("exit", "quit", ":q")
     var input = ""
-    println("Welcome to ulc")
+    println("Welcome to ulc repl!")
     println("Enter exit, quite or :q to quit")
     while
       input = readLine("λ> ")
