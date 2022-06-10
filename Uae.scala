@@ -1,9 +1,9 @@
 //> using scala "3.1.2"
-//> using lib "org.typelevel::cats-core:2.7.0"
-//> using lib "org.typelevel::cats-parse:0.3.7"
 
 // case class Location(val line: Int, val col: Int, val offset: Int)
 // case class Info(start: Location, end: Location)
+
+package uae
 type Info = Unit
 
 enum Term(val info: Info):

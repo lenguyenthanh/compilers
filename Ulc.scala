@@ -1,7 +1,8 @@
 //> using scala "3.1.2"
 //> using lib "org.typelevel::cats-core:2.7.0"
 //> using lib "org.typelevel::cats-parse:0.3.7"
-import cats.data.NonEmptyList
+
+package ulc
 
 case class Location(val line: Int, val col: Int, val offset: Int)
 case class Info(start: Location, end: Location):
@@ -115,6 +116,7 @@ object Parser:
 
   import cats.instances.all.*
   import cats.syntax.all.*
+  import cats.data.NonEmptyList
   extension [A, B](p: Parser[A, B])
     def many: Parser[A, List[B]] = many1.map(_.toList) | Parser.unit[A, List[B]](Nil)
     def many1: Parser[A, NonEmptyList[B]] =
@@ -161,6 +163,7 @@ object Parser1:
   }
 
   import Term.*
+  import cats.data.NonEmptyList
   def term: Parser[Token, Term]           = lambda | group | app | variable
   def termWithoutApp: Parser[Token, Term] = lambda | group | variable
   lazy val variable: Parser[Token, Var] =
