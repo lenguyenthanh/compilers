@@ -7,6 +7,7 @@ t ::=                 term:
       | x             variable
       | λx. t         abstraction
       | t t           application
+      | (t)           grouping
 ```
 
 ## Evaluation
