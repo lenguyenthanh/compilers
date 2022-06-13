@@ -9,19 +9,19 @@ import cats.instances.all.*
 
 class UlcSuite extends munit.FunSuite:
   val input = List(
-    // "\\x. \\y. y",
-    // "\\x. x",
-    // "(\\x. x) x",
-    // "(\\x. x x) x",
-    // "(\\x. \\y. x) a b",
-    // "\\a. \\b. \\s. \\z. a s (b s z)",
-    // "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
+    "\\x. \\y. y",
+    "\\x. x",
+    "(\\x. x) x",
+    "(\\x. x x) x",
+    "(\\x. \\y. x) a b",
+    "\\a. \\b. \\s. \\z. a s (b s z)",
+    "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))",
     "(\\n. \\f. \\x. f (n f x)) (\\f. \\x. x)"
   )
 
   val stmt = List(
     "y = \\x. x"
-    )
+  )
 
   test("Lexer") {
     val result = input.traverse(Lexer.scan)
@@ -46,13 +46,29 @@ class UlcSuite extends munit.FunSuite:
 
   test("de bruijn") {
     val result = input.map(deBruijn)
-    println(result.mkString("\n"))
     assert(true, true)
   }
 
   test("Evaluate") {
-    val result = input.map(Interpreter.eval)
+    val interpreter = Interpreter()
+    val result      = input.map(interpreter.eval)
     println(result.mkString("\n"))
+    assert(true, true)
+  }
+
+  test("Interpreter numeric") {
+    val interpreter = Interpreter()
+    val input = List(
+      "0 = λf. λx. x",
+      "1 = λf. λx. f x",
+      "s = λn. λf. λx. f (n f x)",
+      "add = λm. λn. λf. λx. m (f (n f x))",
+      "Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))",
+    )
+    input.foreach(interpreter.eval)
+    println(interpreter.eval("add"))
+    println(interpreter.eval("add 1 1"))
+    println(interpreter.eval("Y"))
     assert(true, true)
   }
 
@@ -68,7 +84,7 @@ class UlcSuite extends munit.FunSuite:
     for
       ts <- Lexer.scan(x)
       _ = println(ts)
-      t  <- lineParser(ts)
+      t <- lineParser(ts)
     yield t
 
   def deBruijn(x: String) =
