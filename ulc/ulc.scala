@@ -55,7 +55,7 @@ object Lexer:
   val lambda = (P.char('\\') | P.char('λ')).info.map(p => Lambda(p._2))
   val dot    = P.char('.').info.map(p => Dot(p._2))
 
-  val allow = R.alpha | N.digit | P.charIn('!', '@', '#', '$', '%', '^', '&', '*', '_', '?', '<', '>')
+  val allow = R.alpha | N.digit | P.charIn('!', '@', '#', '$', '%', '^', '&', '+', '-', '*', '_', '?', '<', '>', '|')
 
   val identifer = allow.rep.string.info.map(p => Identifier(p._1, p._2))
 
@@ -68,7 +68,7 @@ object Lexer:
       case Right("", ls) => Right(ls)
       case Right(rest, ls) =>
         val idx = str.indexOf(rest)
-        Left(s"Parital string $rest")
+        Left(s"Partial string $rest")
       case Left(err) =>
         val idx = err.failedAtOffset
         val lm  = LocationMap(str)
@@ -135,7 +135,7 @@ object Parser:
 
   lazy val line: P[Token, Stmt | Term] = stmt | app
 
-  lazy val program: P[Token, NonEmptyList[Stmt | Term]] = (line <* token[EndOfLine]).many1
+  lazy val program: P[Token, NonEmptyList[Stmt | Term]] = (line <* token[EndOfLine].?).many1
 
   def collapse(ts: NonEmptyList[Term]): Term =
     ts match

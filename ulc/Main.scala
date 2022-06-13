@@ -4,11 +4,11 @@ package ulc
 
 def loop =
   import scala.io.StdIn.readLine
-  import Parser.{Term, Stmt}
+  import Parser.{ Term, Stmt }
 
-  val interpreter = Interpreter()
+  val interpreter  = Interpreter()
   val quitCommands = List(":quit", ":q")
-  var input = ""
+  var input        = ""
 
   val welcome = """
   |Welcome to ulc repl!
@@ -22,12 +22,17 @@ def loop =
   do
     val line = input match
       case s":load $s" =>
-        val r = for
-          str <- FileReader.read(s)
-          _ <- interpreter.load(str)
-        yield ()
-        println(r.fold(identity, {_ => "Success!"}))
+        load(s)
+      case s":l $s" =>
+        load(s)
       case s =>
         println(interpreter.eval(s))
+
+  def load(path: String) =
+    val r = for
+      str <- FileReader.read(path)
+      _   <- interpreter.load(str)
+    yield ()
+    println(r.fold({s => s"Load failed $path: $s"}, { _ => s"Loaded $path!" }))
 
 @main def main() = loop

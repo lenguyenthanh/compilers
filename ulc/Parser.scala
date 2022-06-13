@@ -94,3 +94,9 @@ object Parser:
         b <- p
         _ <- that
       yield b
+
+    def ? : Parser[A, Option[B]] =
+      input =>
+        p.parse(input) match
+          case Right(rest, b) => Right(rest, Some(b))
+          case Left(_) => Right(input, None)

@@ -63,7 +63,7 @@ class UlcSuite extends munit.FunSuite:
       "1 = λf. λx. f x",
       "s = λn. λf. λx. f (n f x)",
       "add = λm. λn. λf. λx. m (f (n f x))",
-      "Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))",
+      "Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
     )
     input.foreach(interpreter.eval)
     println(interpreter.eval("add"))
