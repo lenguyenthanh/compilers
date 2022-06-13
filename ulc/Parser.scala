@@ -19,7 +19,6 @@ trait Parser[A, +B]:
         case r @ Right(_, _) => r
   }
 
-
 object Parser:
 
   def unit[A, B](b: B): Parser[A, B] = new Parser[A, B] {
@@ -77,3 +76,21 @@ object Parser:
         first <- p
         rest  <- p.many
       yield NonEmptyList(first, rest)
+
+    def ~[C](that: Parser[A, C]): Parser[A, (B, C)] =
+      for
+        b <- p
+        c <- that
+      yield (b, c)
+
+    def *>[C](that: Parser[A, C]): Parser[A, C] =
+      for
+        _ <- p
+        c <- that
+      yield c
+
+    def <*[C](that: Parser[A, C]): Parser[A, B] =
+      for
+        b <- p
+        _ <- that
+      yield b

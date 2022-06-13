@@ -101,7 +101,6 @@ object Parser:
 
   def token[T: Typeable] = P.withFilter[Token](test)
 
-  lazy val term: P[Token, Term]           = app
   lazy val termWithoutApp: P[Token, Term] = lambda | group | variable
 
   lazy val variable: P[Token, Var] =
@@ -118,7 +117,7 @@ object Parser:
   lazy val group =
     for
       _ <- token[LeftParen]
-      t <- term
+      t <- app
       _ <- token[RightParen]
     yield t
 
@@ -129,10 +128,11 @@ object Parser:
       v <- variable
       _ <- token[Assign]
       t <- app
-      // eol <- token[EndOfLine]
     yield Stmt(v.info.merge(t.info), v.name, t)
 
   lazy val line: P[Token, Stmt | Term] = stmt | app
+
+  lazy val program: P[Token, NonEmptyList[Stmt | Term]] = (line <* token[EndOfLine]).many1
 
   def collapse(ts: NonEmptyList[Term]): Term =
     ts match
@@ -246,6 +246,13 @@ class Interpreter:
 
   val env = Map[String, Term]()
 
+  def load(program: String): Either[String, Unit] =
+    for
+      ts <- Lexer.scan(program)
+      p <- Parser.parse(Parser.program)(ts)
+      _ = p.map(eval)
+    yield ()
+
   def eval(input: String): String =
     val r = for
       ts <- Lexer.scan(input)
@@ -254,29 +261,14 @@ class Interpreter:
     r match
       case Left(str) =>
         s"Parse Error: $str"
-      case Right(l) =>
-        l match
-          case t: Term =>
-            val bTerm = DeBruijn.transform(env.toMap, Nil)(t)
-            Evaluation.eval(env.toMap, bTerm).toString
-          case Stmt(_, name, term) =>
-            env += (name -> term)
-            s"$name = $term"
+      case Right(line) =>
+        eval(line)
 
-def loop =
-  import scala.io.StdIn.readLine
-  import Parser.{Term, Stmt}
-
-  val interpreter = Interpreter()
-  val quitCommands = List("exit", "quit", ":q")
-  var input = ""
-
-  println("Welcome to ulc repl!")
-  println("Enter exit, quite or :q to quit")
-  while
-    input = readLine("λ> ")
-    quitCommands.indexOf(input) == -1
-  do
-    println(interpreter.eval(input))
-
-@main def main() = loop
+  def eval(line: Term | Stmt): String =
+    line match
+      case t: Term =>
+        val bTerm = DeBruijn.transform(env.toMap, Nil)(t)
+        Evaluation.eval(env.toMap, bTerm).toString
+      case Stmt(_, name, term) =>
+        env += (name -> term)
+        s"$name = $term"

@@ -8,16 +8,17 @@ The core part (evaluation) is a direct copy/paste from chapter 9 of the book [Ty
 
 ## Todo
 
-- [ ] Support Assignment operator
-- [ ] ParsedAST to de Bruijn's indices AST
-- [ ] REPL
+- [x] Support Assignment operator
+- [x] ParsedAST to de Bruijn's indices AST
+- [x] REPL
 - [ ] Update README
   - grammar
-  - operational semantic rules
-  - Implementation
-  - setup/run/tests
-- [ ] Some more tests
-- [ ] Load program from files
+    - operational semantic rules
+    - Implementation
+    - setup/run/tests
+- [x] Some more tests
+- [x] Load program from files
+- [ ] Support single line comment
 
 ## Issues with free variables
 
