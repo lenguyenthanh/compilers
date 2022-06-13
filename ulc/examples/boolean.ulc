@@ -1,3 +1,4 @@
+-- true combinator
 T = λx. λy. x
 F = λx. λy. y
 

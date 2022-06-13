@@ -7,11 +7,15 @@ def loop =
   import Parser.{Term, Stmt}
 
   val interpreter = Interpreter()
-  val quitCommands = List("exit", "quit", ":q")
+  val quitCommands = List(":quit", ":q")
   var input = ""
 
-  println("Welcome to ulc repl!")
-  println("Enter exit, quit or :q to quit")
+  val welcome = """
+  |Welcome to ulc repl!
+  |Enter :load or :l and then file name to load a program
+  |Enter :quit or :q to quite the repl
+  """.stripMargin
+  println(welcome)
   while
     input = readLine("λ> ")
     quitCommands.indexOf(input) == -1

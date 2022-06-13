@@ -44,6 +44,9 @@ object Lexer:
   val whitespaces: P0[Unit] = P.until0(!R.wsp).void
   val location              = P.caret.map(c => Location(c.line, c.col, c.offset))
 
+  val comment = (P.string("--") *> P.until0(endOfLine) *> endOfLine).void
+  val comments = comment.rep0
+
   // token
   val leftParen  = P.char('(').info.map(p => LeftParen(p._2))
   val rightParen = P.char(')').info.map(p => RightParen(p._2))
@@ -56,7 +59,7 @@ object Lexer:
 
   val identifer = allow.rep.string.info.map(p => Identifier(p._1, p._2))
 
-  val token = (leftParen | rightParen | assign | eol | lambda | dot | identifer).surroundedBy(whitespaces)
+  val token = comments.with1 *> (leftParen | rightParen | assign | eol | lambda | dot | identifer).surroundedBy(whitespaces) <* comments
 
   val parser = token.rep.map(_.toList)
 
