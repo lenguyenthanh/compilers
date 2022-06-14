@@ -17,26 +17,26 @@ case class Info(start: Location, end: Location):
     copy(end = other.end)
 
 enum BTerm(val info: Info):
-  case BVar(override val info: Info, val index: Int) extends BTerm(info)
-  case BAbs(override val info: Info, val term: BTerm)             extends BTerm(info)
+  case BVar(override val info: Info, val index: Int)               extends BTerm(info)
+  case BAbs(override val info: Info, val term: BTerm)              extends BTerm(info)
   case BApp(override val info: Info, val t1: BTerm, val t2: BTerm) extends BTerm(info)
 
   override def toString(): String =
     this match
-      case BVar(_, index) => s"#$index"
-      case BAbs(_, t)            => s"(λ.$t)"
-      case BApp(_, t1, t2)       => s"($t1 $t2)"
+      case BVar(_, index)  => s"#$index"
+      case BAbs(_, t)      => s"(λ.$t)"
+      case BApp(_, t1, t2) => s"($t1 $t2)"
 
 object Lexer:
   import cats.parse.{ Caret, LocationMap, Numbers as N, Parser as P, Parser0 as P0, Rfc5234 as R }
   import Token.*
 
   enum Token(val lexeme: String, val info: Info):
-    case LeftParen(override val info: Info)  extends Token("(", info)
-    case RightParen(override val info: Info) extends Token(")", info)
-    case Assign(override val info: Info) extends Token("=", info)
-    case EndOfLine(override val info: Info) extends Token("\n", info)
-    case Lambda(override val info: Info)     extends Token("\\", info)
+    case LeftParen(override val info: Info)                               extends Token("(", info)
+    case RightParen(override val info: Info)                              extends Token(")", info)
+    case Assign(override val info: Info)                                  extends Token("=", info)
+    case EndOfLine(override val info: Info)                               extends Token("\n", info)
+    case Lambda(override val info: Info)                                  extends Token("\\", info)
     case Dot(override val info: Info)                                     extends Token(".", info)
     case Identifier(override val lexeme: String, override val info: Info) extends Token(lexeme, info)
 
@@ -44,22 +44,23 @@ object Lexer:
   val whitespaces: P0[Unit] = P.until0(!R.wsp).void
   val location              = P.caret.map(c => Location(c.line, c.col, c.offset))
 
-  val comment = (P.string("--") *> P.until0(endOfLine) *> endOfLine).void
+  val comment  = (P.string("--") *> P.until0(endOfLine) *> endOfLine).void
   val comments = comment.rep0
 
   // token
   val leftParen  = P.char('(').info.map(p => LeftParen(p._2))
   val rightParen = P.char(')').info.map(p => RightParen(p._2))
-  val assign = P.char('=').info.map(p => Assign(p._2))
-  val eol = endOfLine.info.map(p => EndOfLine(p._2))
-  val lambda = (P.char('\\') | P.char('λ')).info.map(p => Lambda(p._2))
-  val dot    = P.char('.').info.map(p => Dot(p._2))
+  val assign     = P.char('=').info.map(p => Assign(p._2))
+  val eol        = endOfLine.info.map(p => EndOfLine(p._2))
+  val lambda     = (P.char('\\') | P.char('λ')).info.map(p => Lambda(p._2))
+  val dot        = P.char('.').info.map(p => Dot(p._2))
 
   val allow = R.alpha | N.digit | P.charIn('!', '@', '#', '$', '%', '^', '&', '+', '-', '*', '_', '?', '<', '>', '|')
 
   val identifer = allow.rep.string.info.map(p => Identifier(p._1, p._2))
 
-  val token = comments.with1 *> (leftParen | rightParen | assign | eol | lambda | dot | identifer).surroundedBy(whitespaces) <* comments
+  val token = comments.with1 *> (leftParen | rightParen | assign | eol | lambda | dot | identifer)
+    .surroundedBy(whitespaces) <* comments
 
   val parser = token.rep.map(_.toList)
 
@@ -88,14 +89,14 @@ object Parser:
 
   case class Stmt(val info: Info, val name: String, term: Term)
   enum Term(val info: Info):
-    case Var(override val info: Info, val name: String)            extends Term(info)
+    case Var(override val info: Info, val name: String)             extends Term(info)
     case Abs(override val info: Info, val arg: Var, val term: Term) extends Term(info)
-    case App(override val info: Info, val t1: Term, val t2: Term) extends Term(info)
+    case App(override val info: Info, val t1: Term, val t2: Term)   extends Term(info)
 
     override def toString(): String = this match
       case Var(_, name)      => name
       case Abs(_, arg, term) => s"λ$arg. $term"
-      case App(_, t1, t2)       => s"($t1 $t2)"
+      case App(_, t1, t2)    => s"($t1 $t2)"
 
   def test[T: Typeable](token: Token): Boolean =
     token match
@@ -139,9 +140,10 @@ object Parser:
 
   def collapse(ts: NonEmptyList[Term]): Term =
     ts match
-      case NonEmptyList(head, Nil) => head
-      case NonEmptyList(head, x::Nil) => App(head.info.merge(x.info), head, x)
-      case NonEmptyList(head, x::y::xs) => App(mergeInfo(ts), App(head.info.merge(x.info), head, x), collapse(NonEmptyList(y, xs)))
+      case NonEmptyList(head, Nil)      => head
+      case NonEmptyList(head, x :: Nil) => App(head.info.merge(x.info), head, x)
+      case NonEmptyList(head, x :: y :: xs) =>
+        App(mergeInfo(ts), App(head.info.merge(x.info), head, x), collapse(NonEmptyList(y, xs)))
 
   def mergeInfo(ts: NonEmptyList[Term]): Info =
     ts.foldLeft(ts.head.info)((a, b) => a.merge(b.info))
@@ -163,62 +165,58 @@ object DeBruijn:
     val mFree = ListBuffer.from(free)
     def go(ctx: List[String]): Term => BTerm =
       case Var(fi, x) =>
-        val idx =  ctx.indexOf(x)
+        val idx = ctx.indexOf(x)
         if idx == -1 then
           env.get(x) match
-          case Some(term) => transform(env, mFree.toList)(term)
-          case None =>
-            val freeIdx = mFree.indexOf(x)
-            if freeIdx == -1 then
-              mFree += x
-              BVar(fi, free.length -1)
-            else BVar(fi, freeIdx)
-        else
-          BVar(fi, idx)
+            case Some(term) => transform(env, mFree.toList)(term)
+            case None =>
+              val freeIdx = mFree.indexOf(x)
+              if freeIdx == -1 then
+                mFree += x
+                BVar(fi, free.length - 1)
+              else BVar(fi, freeIdx)
+        else BVar(fi, idx)
       case Abs(fi, x, t) =>
-        BAbs(fi, go(x.name::ctx)(t))
+        BAbs(fi, go(x.name :: ctx)(t))
       case App(fi, t1, t2) =>
         BApp(fi, go(ctx)(t1), go(ctx)(t2))
     go(Nil)
 
 object Evaluation:
-  import BTerm as Term
   import BTerm.*
 
-  def termShift(d: Int): Term => Term = termShift(d, 0)
+  def termShift(d: Int): BTerm => BTerm = termShift(d, 0)
 
   // the shift operator ↑ d c for term t
-  def termShift(d: Int, c: Int): Term => Term =
+  def termShift(d: Int, c: Int): BTerm => BTerm =
     def onVar(v: BVar, c: Int): BVar =
-      if v.index >= c then
-        v.copy(index = v.index + d)
-      else
-        v
+      if v.index >= c then v.copy(index = v.index + d)
+      else v
     map(onVar, c)
 
   // The substitution [j ↦ s] t of term s for numbered j in term t
-  def termSubst(j: Int, s: Term): Term => Term =
-    def onVar(v: BVar, c: Int): Term =
+  def termSubst(j: Int, s: BTerm): BTerm => BTerm =
+    def onVar(v: BVar, c: Int): BTerm =
       if v.index == j + c then termShift(c)(s)
       else v
     map(onVar, 0)
 
-  def termSubstTop(s: Term): Term => Term =
+  def termSubstTop(s: BTerm): BTerm => BTerm =
     (termSubst(0, termShift(1)(s))) andThen termShift(-1)
 
-  def map(onVar: (BVar, Int) => Term, c: Int)(term: Term): Term =
-    def walk(onVar: (BVar, Int) => Term, c: Int, t: Term): Term =
+  def map(onVar: (BVar, Int) => BTerm, c: Int)(term: BTerm): BTerm =
+    def walk(onVar: (BVar, Int) => BTerm, c: Int, t: BTerm): BTerm =
       t match
-        case t @ BVar(_, _) => onVar(t, c)
-        case BAbs(fi, t1)      => BAbs(fi, walk(onVar, c + 1, t1))
-        case BApp(fi, t1, t2)  => BApp(fi, walk(onVar, c, t1), walk(onVar, c, t2))
+        case t @ BVar(_, _)   => onVar(t, c)
+        case BAbs(fi, t1)     => BAbs(fi, walk(onVar, c + 1, t1))
+        case BApp(fi, t1, t2) => BApp(fi, walk(onVar, c, t1), walk(onVar, c, t2))
     walk(onVar, c, term)
 
-  def isVal: Term => Boolean =
+  def isVal: BTerm => Boolean =
     case BAbs(_, _) => true
-    case _           => false
+    case _          => false
 
-  def eval1(env: Env, term: Term): (Term, Boolean) =
+  def eval1(env: Env, term: BTerm): (BTerm, Boolean) =
     term match
       case BApp(fi, BAbs(_, t12), v2) if isVal(v2) =>
         (termSubstTop(v2)(t12), false)
@@ -230,17 +228,20 @@ object Evaluation:
         (BApp(fi, r1._1, t2), r1._2)
       case _ => (term, true)
 
-  def eval(env: Env, term: Term): Term =
+  def eval(env: Env, term: BTerm): BTerm =
     val t1 = eval1(env, term)
     t1 match
       case (t, false) => eval(env, t)
       case (t, true)  => t
 
-  def eval(term: Term): Term =
+  def eval(term: BTerm): BTerm =
     eval(Map.empty, term)
 
+  def norm(env: Env, term: BTerm): BTerm =
+    eval(env, term)
+
 class Interpreter:
-  import Parser.{Term, Stmt}
+  import Parser.{ Stmt, Term }
   import scala.collection.mutable.Map
 
   val env = Map[String, Term]()
@@ -248,14 +249,14 @@ class Interpreter:
   def load(program: String): Either[String, Unit] =
     for
       ts <- Lexer.scan(program)
-      p <- Parser.parse(Parser.program)(ts)
+      p  <- Parser.parse(Parser.program)(ts)
       _ = p.map(eval)
     yield ()
 
   def eval(input: String): String =
     val r = for
       ts <- Lexer.scan(input)
-      t <- Parser.parse(Parser.line)(ts)
+      t  <- Parser.parse(Parser.line)(ts)
     yield t
     r match
       case Left(str) =>

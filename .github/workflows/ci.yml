@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - "v*"
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - uses: coursier/cache-action@v6.3
+    - uses: VirtusLab/scala-cli-setup@v0.1
+    - name: Test
+      run: ./scala-cli test ucl --cross
+  format:
+    runs-on: "ubuntu-latest"
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - uses: coursier/cache-action@v6.3
+    - uses: VirtusLab/scala-cli-setup@v0.1
+    - name: Scalafmt check
+      run: |
+        scala-cli fmt --check ulc || (
+          echo "To format code run"
+          echo "  scala-cli fmt ."
+          exit 1
+        )

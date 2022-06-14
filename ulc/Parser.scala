@@ -99,4 +99,4 @@ object Parser:
       input =>
         p.parse(input) match
           case Right(rest, b) => Right(rest, Some(b))
-          case Left(_) => Right(input, None)
+          case Left(_)        => Right(input, None)

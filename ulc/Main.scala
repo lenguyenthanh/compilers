@@ -16,9 +16,10 @@ def loop =
   |Enter :quit or :q to quite the repl
   """.stripMargin
   println(welcome)
-  while
+  while {
     input = readLine("λ> ")
     quitCommands.indexOf(input) == -1
+  }
   do
     val line = input match
       case s":load $s" =>
@@ -33,6 +34,6 @@ def loop =
       str <- FileReader.read(path)
       _   <- interpreter.load(str)
     yield ()
-    println(r.fold({s => s"Load failed $path: $s"}, { _ => s"Loaded $path!" }))
+    println(r.fold({ s => s"Load failed $path: $s" }, { _ => s"Loaded $path!" }))
 
 @main def main() = loop
