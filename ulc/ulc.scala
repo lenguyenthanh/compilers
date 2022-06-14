@@ -220,19 +220,14 @@ object Evaluation:
 
   def eval1(env: Env, term: Term): (Term, Boolean) =
     term match
-      case BApp(fi, BAbs(_, t12), v2) =>
+      case BApp(fi, BAbs(_, t12), v2) if isVal(v2) =>
         (termSubstTop(v2)(t12), false)
-      // TODO fix - so ugly
+      case BApp(fi, t1, t2) if isVal(t1) =>
+        val r1 = eval1(env, t2)
+        (BApp(fi, t1, r1._1), r1._2)
       case BApp(fi, t1, t2) =>
         val r1 = eval1(env, t1)
-        val r2 = eval1(env, t2)
-        (BApp(fi, r1._1, r2._1), r1._2 && r2._2)
-      case BAbs(fi, t) =>
-        val r = eval(env, t)
-        (BAbs(fi, r), true)
-      // case BApp(fi, t1, t2) =>
-      //   val r1 = eval1(env, t1)
-      //   (BApp(fi, r1._1, t2), r1._2)
+        (BApp(fi, r1._1, t2), r1._2)
       case _ => (term, true)
 
   def eval(env: Env, term: Term): Term =
