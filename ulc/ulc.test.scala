@@ -9,15 +9,15 @@ import cats.instances.all.*
 
 class UlcSuite extends munit.FunSuite:
   val input = List(
-    "(λx. x x)(λx. x x)"
-    // "\\x. \\y. y",
-    // "\\x. x",
-    // "(\\x. x) x",
-    // "(\\x. x x) x",
-    // "(\\x. \\y. x) a b",
-    // "\\a. \\b. \\s. \\z. a s (b s z)",
-    // "(\\n. \\f. \\x. f (n f x)) (\\f. \\x. x)",
-    // "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))",
+    // "(λx. x x)(λx. x x)"
+    "\\x. \\y. y",
+    "\\x. x",
+    "(\\x. x) x",
+    "(\\x. x x) x",
+    "(\\x. \\y. x) a b",
+    "\\a. \\b. \\s. \\z. a s (b s z)",
+    "(\\n. \\f. \\x. f (n f x)) (\\f. \\x. x)",
+    "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))",
   )
 
   val stmt = List(
