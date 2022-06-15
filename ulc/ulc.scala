@@ -218,15 +218,16 @@ object Evaluation:
 
   def callByValueEval(env: Env, term: BTerm): BTerm =
     def go(env: Env, term: BTerm): (BTerm, Boolean) =
+      println(s"go $term")
       term match
         case BApp(fi, BAbs(_, t12), v2) if isVal(v2) =>
           (termSubstTop(v2)(t12), false)
         case BApp(fi, t1, t2) if isVal(t1) =>
           val r1 = go(env, t2)
           (BApp(fi, t1, r1._1), r1._2)
-        case BApp(fi, t1, t2) =>
-          val r1 = go(env, t1)
-          (BApp(fi, r1._1, t2), r1._2)
+        // case BApp(fi, t1, t2) =>
+        //   val r1 = go(env, t1)
+        //   (BApp(fi, r1._1, t2), r1._2)
         case _ => (term, true)
 
     val t1 = go(env, term)
@@ -238,13 +239,13 @@ object Evaluation:
     callByValueEval(Map.empty, term)
 
   def eval(env: Env, term: BTerm, count: Int): Option[BTerm] =
-    def go(env: Env, term: BTerm): (BTerm, Boolean) =
+    def go(env: Env, term: BTerm, count: Int): (BTerm, Boolean) =
       term match
         case BApp(fi, BAbs(_, t12), v2) =>
           (termSubstTop(v2)(t12), false)
         case BApp(fi, t1, t2) =>
-          val r1 = go(env, t1)
-          val r2 = go(env, t2)
+          val r1 = go(env, t1, count + 1)
+          val r2 = go(env, t2, count + 1)
           (BApp(fi, r1._1, r2._1), r1._2 && r2._2)
         case BAbs(fi, t) =>
           eval(env, t, count +  1) match
@@ -252,10 +253,10 @@ object Evaluation:
             case None => (BAbs(fi, t), true)
         case _ => (term, true)
 
-    if count >= 1000 then
+    if count >= 10000 then
       None
     else
-      val t1 = go(env, term)
+      val t1 = go(env, term, count)
       t1 match
         case (t, false) => eval(env, t, count + 1)
         case (t, true)  => Some(t)
