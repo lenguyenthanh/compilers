@@ -216,29 +216,58 @@ object Evaluation:
     case BAbs(_, _) => true
     case _          => false
 
-  def eval1(env: Env, term: BTerm): (BTerm, Boolean) =
-    term match
-      case BApp(fi, BAbs(_, t12), v2) if isVal(v2) =>
-        (termSubstTop(v2)(t12), false)
-      case BApp(fi, t1, t2) if isVal(t1) =>
-        val r1 = eval1(env, t2)
-        (BApp(fi, t1, r1._1), r1._2)
-      case BApp(fi, t1, t2) =>
-        val r1 = eval1(env, t1)
-        (BApp(fi, r1._1, t2), r1._2)
-      case _ => (term, true)
+  def callByValueEval(env: Env, term: BTerm): BTerm =
+    def go(env: Env, term: BTerm): (BTerm, Boolean) =
+      term match
+        case BApp(fi, BAbs(_, t12), v2) if isVal(v2) =>
+          (termSubstTop(v2)(t12), false)
+        case BApp(fi, t1, t2) if isVal(t1) =>
+          val r1 = go(env, t2)
+          (BApp(fi, t1, r1._1), r1._2)
+        case BApp(fi, t1, t2) =>
+          val r1 = go(env, t1)
+          (BApp(fi, r1._1, t2), r1._2)
+        case _ => (term, true)
 
-  def eval(env: Env, term: BTerm): BTerm =
-    val t1 = eval1(env, term)
+    val t1 = go(env, term)
     t1 match
-      case (t, false) => eval(env, t)
+      case (t, false) => callByValueEval(env, t)
       case (t, true)  => t
 
-  def eval(term: BTerm): BTerm =
-    eval(Map.empty, term)
+  def callByValueEval(term: BTerm): BTerm =
+    callByValueEval(Map.empty, term)
+
+  def eval(env: Env, term: BTerm, count: Int): Option[BTerm] =
+    def go(env: Env, term: BTerm): (BTerm, Boolean) =
+      term match
+        case BApp(fi, BAbs(_, t12), v2) =>
+          (termSubstTop(v2)(t12), false)
+        case BApp(fi, t1, t2) =>
+          val r1 = go(env, t1)
+          val r2 = go(env, t2)
+          (BApp(fi, r1._1, r2._1), r1._2 && r2._2)
+        case BAbs(fi, t) =>
+          eval(env, t, count +  1) match
+            case Some(r) => (BAbs(fi, r), true)
+            case None => (BAbs(fi, t), true)
+        case _ => (term, true)
+
+    if count >= 1000 then
+      None
+    else
+      val t1 = go(env, term)
+      t1 match
+        case (t, false) => eval(env, t, count + 1)
+        case (t, true)  => Some(t)
+
+  def norm(term: BTerm): BTerm =
+    norm(Map.empty, term)
 
   def norm(env: Env, term: BTerm): BTerm =
-    eval(env, term)
+    val t = callByValueEval(env, term)
+    eval(env, t, 0) match
+      case Some(t1) => t1
+      case None => t
 
 class Interpreter:
   import Parser.{ Stmt, Term }
@@ -268,7 +297,7 @@ class Interpreter:
     line match
       case t: Term =>
         val bTerm = DeBruijn.transform(env.toMap, Nil)(t)
-        Evaluation.eval(env.toMap, bTerm).toString
+        Evaluation.norm(env.toMap, bTerm).toString
       case Stmt(_, name, term) =>
         env += (name -> term)
         s"$name = $term"

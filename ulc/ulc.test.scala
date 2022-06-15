@@ -9,7 +9,6 @@ import cats.instances.all.*
 
 class UlcSuite extends munit.FunSuite:
   val input = List(
-    // "(λx. x x)(λx. x x)"
     "\\x. \\y. y",
     "\\x. x",
     "(\\x. x) x",
@@ -63,13 +62,13 @@ class UlcSuite extends munit.FunSuite:
       "0 = λf. λx. x",
       "1 = λf. λx. f x",
       "s = λn. λf. λx. f (n f x)",
-      "add = λm. λn. λf. λx. m (f (n f x))",
+      "+ = λm. λn. λf. λx. m f (n f x)",
       "Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
     )
     input.foreach(interpreter.eval)
-    println(interpreter.eval("add"))
-    println(interpreter.eval("add 1 1"))
-    println(interpreter.eval("Y"))
+    // println(interpreter.eval("add"))
+    println(interpreter.eval("+ 1 1"))
+    // println(interpreter.eval("Y"))
     assert(true, true)
   }
 
