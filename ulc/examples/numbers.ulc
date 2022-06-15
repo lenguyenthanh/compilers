@@ -40,11 +40,8 @@ prd = λm. fst (m ss zz)
 eqN = λm. λn. && (is0 (- m n)) (is0 (- n m))
 
 Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))
-f1 = λn. (is1 n) 1 (* n (prd n))
-f2 = λr. λn. (is0 n) 1 (* n (r (prd n)))
-fact = λn. Y (f2 n)
--- Y = \f. (\x. x x)(\x. f (x x))
--- fact = Y ((\f. \n. (is0 n) 1 (* n (f (prd n)))) 1)
+fact' = λr. λn. (is0 n) 1 (* n (r (prd n)))
+fact = λn. Y fact' n
 
 2 = + 1 1
 3 = + 2 1

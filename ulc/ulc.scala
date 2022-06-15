@@ -55,7 +55,8 @@ object Lexer:
   val lambda     = (P.char('\\') | P.char('λ')).info.map(p => Lambda(p._2))
   val dot        = P.char('.').info.map(p => Dot(p._2))
 
-  val allow = R.alpha | N.digit | P.charIn('!', '@', '#', '$', '%', '^', '&', '+', '-', '*', '_', '?', '<', '>', '|')
+  val allow =
+    R.alpha | N.digit | P.charIn('!', '@', '#', '$', '%', '^', '&', '+', '-', '*', '_', '?', '<', '>', '|', '\'')
 
   val identifer = allow.rep.string.info.map(p => Identifier(p._1, p._2))
 
@@ -216,59 +217,38 @@ object Evaluation:
     case BAbs(_, _) => true
     case _          => false
 
-  def callByValueEval(env: Env, term: BTerm): BTerm =
-    def go(env: Env, term: BTerm): (BTerm, Boolean) =
-      println(s"go $term")
-      term match
-        case BApp(fi, BAbs(_, t12), v2) if isVal(v2) =>
-          (termSubstTop(v2)(t12), false)
-        case BApp(fi, t1, t2) if isVal(t1) =>
-          val r1 = go(env, t2)
-          (BApp(fi, t1, r1._1), r1._2)
-        // case BApp(fi, t1, t2) =>
-        //   val r1 = go(env, t1)
-        //   (BApp(fi, r1._1, t2), r1._2)
-        case _ => (term, true)
+  def eval1(env: Env, term: BTerm): BTerm =
+    term match
+      case BApp(fi, t1, t2) =>
+        val r = eval1(env, t1)
+        r match
+          case BAbs(fi, t12) =>
+            eval1(env, termSubstTop(t2)(t12))
+          case _ =>
+            BApp(fi, r, t2)
+      case _ =>
+        term
 
-    val t1 = go(env, term)
-    t1 match
-      case (t, false) => callByValueEval(env, t)
-      case (t, true)  => t
-
-  def callByValueEval(term: BTerm): BTerm =
-    callByValueEval(Map.empty, term)
-
-  def eval(env: Env, term: BTerm, count: Int): Option[BTerm] =
-    def go(env: Env, term: BTerm, count: Int): (BTerm, Boolean) =
-      term match
-        case BApp(fi, BAbs(_, t12), v2) =>
-          (termSubstTop(v2)(t12), false)
-        case BApp(fi, t1, t2) =>
-          val r1 = go(env, t1, count + 1)
-          val r2 = go(env, t2, count + 1)
-          (BApp(fi, r1._1, r2._1), r1._2 && r2._2)
-        case BAbs(fi, t) =>
-          eval(env, t, count +  1) match
-            case Some(r) => (BAbs(fi, r), true)
-            case None => (BAbs(fi, t), true)
-        case _ => (term, true)
-
-    if count >= 10000 then
-      None
+  def norm(env: Env, term: BTerm, count: Int): Option[BTerm] =
+    if count > 100000 then None
     else
-      val t1 = go(env, term, count)
-      t1 match
-        case (t, false) => eval(env, t, count + 1)
-        case (t, true)  => Some(t)
+      eval1(env, term) match
+        case BAbs(fi, t) => norm(env, t, count + 1).map(BAbs(fi, _))
+        case BApp(fi, t1, t2) =>
+          for
+            t11 <- norm(env, t1, count + 1)
+            t22 <- norm(env, t2, count + 1)
+          yield BApp(fi, t11, t22)
+        case t @ _ => Some(t)
 
   def norm(term: BTerm): BTerm =
     norm(Map.empty, term)
 
   def norm(env: Env, term: BTerm): BTerm =
-    val t = callByValueEval(env, term)
-    eval(env, t, 0) match
+    val t = eval1(env, term)
+    norm(env, t, 0) match
       case Some(t1) => t1
-      case None => t
+      case None     => t
 
 class Interpreter:
   import Parser.{ Stmt, Term }
