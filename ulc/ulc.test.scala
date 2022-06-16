@@ -16,7 +16,7 @@ class UlcSuite extends munit.FunSuite:
     "(\\x. \\y. x) a b",
     "\\a. \\b. \\s. \\z. a s (b s z)",
     "(\\n. \\f. \\x. f (n f x)) (\\f. \\x. x)",
-    "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
+    // "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
   )
 
   val stmt = List(

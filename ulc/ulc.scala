@@ -213,17 +213,13 @@ object Evaluation:
         case BApp(fi, t1, t2) => BApp(fi, walk(onVar, c, t1), walk(onVar, c, t2))
     walk(onVar, c, term)
 
-  def isVal: BTerm => Boolean =
-    case BAbs(_, _) => true
-    case _          => false
-
-  def eval1(env: Env, term: BTerm): BTerm =
+  def eval(env: Env, term: BTerm): BTerm =
     term match
       case BApp(fi, t1, t2) =>
-        val r = eval1(env, t1)
+        val r = eval(env, t1)
         r match
           case BAbs(fi, t12) =>
-            eval1(env, termSubstTop(t2)(t12))
+            eval(env, termSubstTop(t2)(t12))
           case _ =>
             BApp(fi, r, t2)
       case _ =>
@@ -232,7 +228,7 @@ object Evaluation:
   def norm(env: Env, term: BTerm, count: Int): Option[BTerm] =
     if count > 100000 then None
     else
-      eval1(env, term) match
+      eval(env, term) match
         case BAbs(fi, t) => norm(env, t, count + 1).map(BAbs(fi, _))
         case BApp(fi, t1, t2) =>
           for
@@ -245,7 +241,7 @@ object Evaluation:
     norm(Map.empty, term)
 
   def norm(env: Env, term: BTerm): BTerm =
-    val t = eval1(env, term)
+    val t = eval(env, term)
     norm(env, t, 0) match
       case Some(t1) => t1
       case None     => t
