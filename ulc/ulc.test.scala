@@ -16,7 +16,7 @@ class UlcSuite extends munit.FunSuite:
     "(\\x. \\y. x) a b",
     "\\a. \\b. \\s. \\z. a s (b s z)",
     "(\\n. \\f. \\x. f (n f x)) (\\f. \\x. x)",
-    // "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
+    "λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
   )
 
   val stmt = List(
@@ -49,27 +49,37 @@ class UlcSuite extends munit.FunSuite:
     assert(true, true)
   }
 
-  test("Evaluate") {
-    val interpreter = Interpreter()
-    val result      = input.map(interpreter.eval)
-    println(result.mkString("\n"))
-    assert(true, true)
-  }
-
-  test("Interpreter numeric") {
+  test("Factorial") {
     val interpreter = Interpreter()
     val input = List(
+      "T = λx. λy. x",
+      "F = λx. λy. y",
       "0 = λf. λx. x",
       "1 = λf. λx. f x",
-      "s = λn. λf. λx. f (n f x)",
+      "2 = λf. λx. f (f x)",
+      "4 = λf. λx. f ( f (f (f x)))",
       "+ = λm. λn. λf. λx. m f (n f x)",
-      "Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))"
+      "* = λm. λn. m (+ n) 0",
+      "6 = + 4 2",
+      "24 = * 4 6",
+      "is0 = λn. n (λx. F) T",
+      "pair = λf. λs. λb. b f s",
+      "fst = λp. p T",
+      "snd = λp. p F",
+      "zz = pair 0 0",
+      "ss = λp. pair (snd p) (+ 1 (snd p))",
+      "prd = λm. fst (m ss zz)",
+      "Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))",
+      "fact' = λr. λn. (is0 n) 1 (* n (r (prd n)))",
+      "fact = λn. Y fact\' n"
     )
     input.foreach(interpreter.eval)
-    // println(interpreter.eval("add"))
-    println(interpreter.eval("+ 1 1"))
-    // println(interpreter.eval("Y"))
-    assert(true, true)
+    val f2 = interpreter.eval("prd 2")
+    val two = interpreter.eval("1")
+    assertEquals(f2, two)
+    val f4 = interpreter.eval("fact 4")
+    val twentyFour = interpreter.eval("24")
+    assertEquals(f2, two)
   }
 
   val lineParser = Parser.parse(Parser.line)
@@ -83,7 +93,6 @@ class UlcSuite extends munit.FunSuite:
   def lineParse(x: String) =
     for
       ts <- Lexer.scan(x)
-      _ = println(ts)
       t <- lineParser(ts)
     yield t
 

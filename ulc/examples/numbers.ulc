@@ -29,8 +29,6 @@ succ = λn. λs. λz. s (n s z)
 
 is0 = λn. n (λx. F) T
 is1 = λn. eqN n 1
-
--- predeccessor
 zz = pair 0 0
 ss = λp. pair (snd p) (+ 1 (snd p))
 prd = λm. fst (m ss zz)
