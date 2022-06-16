@@ -1,6 +1,6 @@
 # Untyped Lambda Calculus Interpreter
 
-This an untyped lambda calculus (ulc) interpreter implement in Scala 3.
+An interpreter for untyped lambda calculus (ulc) with some extended grammars implemented in Scala 3.
 
 ## Introduction
 
@@ -18,7 +18,8 @@ The core part (evaluation) is a direct copy/paste from chapter 9 of the book [Ty
     - setup/run/tests
 - [x] Some more tests
 - [x] Load program from files
-- [ ] Support single line comment
+- [x] Support single line comment
+- [ ] Resource
 
 ## Issues with free variables
 
