@@ -74,10 +74,10 @@ class UlcSuite extends munit.FunSuite:
       "fact = λn. Y fact\' n"
     )
     input.foreach(interpreter.eval)
-    val f2 = interpreter.eval("prd 2")
+    val f2  = interpreter.eval("prd 2")
     val two = interpreter.eval("1")
     assertEquals(f2, two)
-    val f4 = interpreter.eval("fact 4")
+    val f4         = interpreter.eval("fact 4")
     val twentyFour = interpreter.eval("24")
     assertEquals(f2, two)
   }
@@ -93,7 +93,7 @@ class UlcSuite extends munit.FunSuite:
   def lineParse(x: String) =
     for
       ts <- Lexer.scan(x)
-      t <- lineParser(ts)
+      t  <- lineParser(ts)
     yield t
 
   def deBruijn(x: String) =
