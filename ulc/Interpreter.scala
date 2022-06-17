@@ -8,6 +8,7 @@ import cats.*
 import cats.syntax.all.*
 import cats.instances.all.*
 import cats.data.NonEmptyList
+import scala.annotation.tailrec
 
 type Env = Map[String, Parser.Term]
 
@@ -16,16 +17,16 @@ case class Info(start: Location, end: Location):
   def merge(other: Info): Info =
     copy(end = other.end)
 
-enum BTerm(val info: Info):
-  case BVar(override val info: Info, val index: Int)               extends BTerm(info)
-  case BAbs(override val info: Info, val term: BTerm)              extends BTerm(info)
-  case BApp(override val info: Info, val t1: BTerm, val t2: BTerm) extends BTerm(info)
+enum BTerm:
+  case BVar(val index: Int)
+  case BAbs(val term: BTerm)
+  case BApp(val t1: BTerm, val t2: BTerm)
 
   override def toString(): String =
     this match
-      case BVar(_, index)  => s"#$index"
-      case BAbs(_, t)      => s"(λ.$t)"
-      case BApp(_, t1, t2) => s"($t1 $t2)"
+      case BVar(index)  => s"#$index"
+      case BAbs(t)      => s"(λ.$t)"
+      case BApp(t1, t2) => s"($t1 $t2)"
 
 object Lexer:
   import cats.parse.{ Caret, LocationMap, Numbers as N, Parser as P, Parser0 as P0, Rfc5234 as R }
@@ -162,25 +163,24 @@ object DeBruijn:
   import scala.collection.mutable.ListBuffer
 
   def transform(env: Env, free: List[String]): Term => BTerm =
-    // TODO mutation doesn't work
-    val mFree = ListBuffer.from(free)
+    val localFree = ListBuffer.from(free)
     def go(ctx: List[String]): Term => BTerm =
       case Var(fi, x) =>
         val idx = ctx.indexOf(x)
         if idx == -1 then
           env.get(x) match
-            case Some(term) => transform(env, mFree.toList)(term)
+            case Some(term) => transform(env, localFree.toList)(term)
             case None =>
-              val freeIdx = mFree.indexOf(x)
+              val freeIdx = localFree.indexOf(x)
               if freeIdx == -1 then
-                mFree += x
-                BVar(fi, free.length - 1)
-              else BVar(fi, freeIdx)
-        else BVar(fi, idx)
+                localFree += x
+                BVar(free.length - 1)
+              else BVar(freeIdx)
+        else BVar(idx)
       case Abs(fi, x, t) =>
-        BAbs(fi, go(x.name :: ctx)(t))
+        BAbs(go(x.name :: ctx)(t))
       case App(fi, t1, t2) =>
-        BApp(fi, go(ctx)(t1), go(ctx)(t2))
+        BApp(go(ctx)(t1), go(ctx)(t2))
     go(Nil)
 
 object Evaluation:
@@ -208,20 +208,20 @@ object Evaluation:
   def map(onVar: (BVar, Int) => BTerm, c: Int)(term: BTerm): BTerm =
     def walk(onVar: (BVar, Int) => BTerm, c: Int, t: BTerm): BTerm =
       t match
-        case t @ BVar(_, _)   => onVar(t, c)
-        case BAbs(fi, t1)     => BAbs(fi, walk(onVar, c + 1, t1))
-        case BApp(fi, t1, t2) => BApp(fi, walk(onVar, c, t1), walk(onVar, c, t2))
+        case t @ BVar(_)  => onVar(t, c)
+        case BAbs(t1)     => BAbs(walk(onVar, c + 1, t1))
+        case BApp(t1, t2) => BApp(walk(onVar, c, t1), walk(onVar, c, t2))
     walk(onVar, c, term)
 
   def eval(env: Env, term: BTerm): BTerm =
     term match
-      case BApp(fi, t1, t2) =>
+      case BApp(t1, t2) =>
         val r = eval(env, t1)
         r match
-          case BAbs(fi, t12) =>
+          case BAbs(t12) =>
             eval(env, termSubstTop(t2)(t12))
           case _ =>
-            BApp(fi, r, t2)
+            BApp(r, t2)
       case _ =>
         term
 
@@ -229,12 +229,12 @@ object Evaluation:
     if count > 100000 then None
     else
       eval(env, term) match
-        case BAbs(fi, t) => norm(env, t, count + 1).map(BAbs(fi, _))
-        case BApp(fi, t1, t2) =>
+        case BAbs(t) => norm(env, t, count + 1).map(BAbs(_))
+        case BApp(t1, t2) =>
           for
             t11 <- norm(env, t1, count + 1)
             t22 <- norm(env, t2, count + 1)
-          yield BApp(fi, t11, t22)
+          yield BApp(t11, t22)
         case t @ _ => Some(t)
 
   def norm(term: BTerm): BTerm =

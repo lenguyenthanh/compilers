@@ -27,7 +27,7 @@ def loop =
       case s":l $s" =>
         load(s)
       case s =>
-        println(interpreter.eval(s))
+        println(removeRedundantParent(interpreter.eval(s)))
 
   def load(path: String) =
     val r = for
@@ -35,5 +35,10 @@ def loop =
       _   <- interpreter.load(str)
     yield ()
     println(r.fold({ s => s"Load failed $path: $s" }, { _ => s"Loaded $path!" }))
+
+def removeRedundantParent(str: String) =
+  str match
+    case s"($s)" => s
+    case _       => str
 
 @main def main() = loop
