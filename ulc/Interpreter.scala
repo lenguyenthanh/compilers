@@ -163,18 +163,17 @@ object DeBruijn:
   import scala.collection.mutable.ListBuffer
 
   def transform(env: Env, free: List[String]): Term => BTerm =
-    // TODO mutation doesn't work
-    val mFree = ListBuffer.from(free)
+    val localFree = ListBuffer.from(free)
     def go(ctx: List[String]): Term => BTerm =
       case Var(fi, x) =>
         val idx = ctx.indexOf(x)
         if idx == -1 then
           env.get(x) match
-            case Some(term) => transform(env, mFree.toList)(term)
+            case Some(term) => transform(env, localFree.toList)(term)
             case None =>
-              val freeIdx = mFree.indexOf(x)
+              val freeIdx = localFree.indexOf(x)
               if freeIdx == -1 then
-                mFree += x
+                localFree += x
                 BVar(free.length - 1)
               else BVar(freeIdx)
         else BVar(idx)
