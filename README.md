@@ -12,4 +12,4 @@ scala-cli ulc
 ```
 
 - [Evaluation for untyped arithmetic expression](uae)
-- [Interpreter for untyped lambda calculus](uce)
+- [Interpreter for untyped lambda calculus](ulc)
