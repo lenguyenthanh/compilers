@@ -1,35 +1,39 @@
-# Untyped Lambda Calculus Interpreter
+# Untyped Lambda Calculus
 
-An interpreter for untyped lambda calculus (ulc) with some extended grammars implemented in Scala 3.
+An interpreter for [untyped lambda calculus](https://en.wikipedia.org/wiki/Lambda_calculus) (ulc) with some extended grammars implemented in Scala 3. I added some extended syntax to make it easier to use (like let binding or \ can be used instead of λ). You can check the formal grammar definition [here](./grammar.md)
 
-## Introduction
+## Features
 
-The core part (evaluation) is a direct copy/paste from chapter 9 of the book [Types and Programming Languages](https://www.cis.upenn.edu/~bcpierce/tapl/) of Benjamin C. Pierce.
+- repl
+- load programs from files
+- factorial
+- update examples
 
-## Todo
+## Architecture Overview
 
-- [x] Support Assignment operator
-- [x] ParsedAST to de Bruijn's indices AST
-- [x] REPL
-- [ ] Update README
-  - grammar
-    - operational semantic rules
-    - Implementation
-    - setup/run/tests
-- [x] Some more tests
-- [x] Load program from files
-- [x] Support single line comment
-- [ ] Resource
+The overall architecture of this interpreter looks like:
+```
+       Lexer          Parser              de Bruijn indices transformation                  Evaluator
+String =====> [Token] ======> Parsed AST ==================================> nameless AST  ===========> result
+```
 
-## Issues with free variables
+### Lexer
 
-## variable lookup rule order
+First we need a [Lexer](https://en.wikipedia.org/wiki/Lexical_analysis) (or Scanner, Tokenizer) to parse the program into a list of [Token](https://en.wikipedia.org/wiki/Lexical_analysis#Token). I use [Parser Combinators](https://en.wikipedia.org/wiki/Parser_combinator) technique with help of the wonderful [cats-parse](https://github.com/typelevel/cats-parse) library.
 
-- context
-- env
-- free
+### Parser
 
-## Overview
+Next step is a [Parser](https://en.wikipedia.org/wiki/Parsing), which receives a list of Token and turn it into a [abstract syntax tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree) or parsed tree or AST for short. I also using Parser Combinator technique here by building a simple and stupid [Parser Combinator](./Parser.scala) by my own.
 
-        Lexer            Parser            Name removing (de Bruijn indices)                  Evaluator           Pretty printer
-String ======> [Token] ======> Parsed AST ===================================> nameless AST  ===========> result ================> String
+### de Bruijn Index Transformation
+
+[de Bruijn index](https://en.wikipedia.org/wiki/De_Bruijn_index) or nameless representation of terms.
+
+### Evaluation
+
+The final step is the evaluation. I use the exact implementation that is described [in the Evaluation section here](https://crypto.stanford.edu/~blynn/lambda/).
+
+## Resources
+
+- [Chapter 5,6, 7 of Type and Programming Languages](https://www.cis.upenn.edu/~bcpierce/tapl/)
+- [Ben Lynn's lambd](https://crypto.stanford.edu/~blynn/lambda/)
