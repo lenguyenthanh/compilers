@@ -1,13 +1,15 @@
+-- Boolean values
 -- true
 T = λx. λy. x
 -- false
 F = λx. λy. y
 
--- not
+-- Boolean operators
 ! = λb. b F T
 && = λa. λb. a b F
 || = λa. λb. a T b
 
+-- if expression
 if = λb. λx. λy. b x y
 
 -- pair
@@ -20,27 +22,40 @@ snd = λp. p F
 1 = λs. λz. s z
 2 = λs. λz. s (s z)
 
--- numbers operations
+-- number operations
+
 -- successor number
 succ = λn. λs. λz. s (n s z)
+
+-- Plus
 + = λa. λb. λs. λz. a s (b s z)
+-- Multiply
 * = λm. λn. m (+ n) 0
+-- Power
 ^ = λm. λn. n (* m) 1
 
+-- Check a number is Zero or not
 is0 = λn. n (λx. F) T
-is1 = λn. eqN n 1
 zz = pair 0 0
 ss = λp. pair (snd p) (+ 1 (snd p))
-prd = λm. fst (m ss zz)
 
-- = λm. λn. n prd m
+-- previous number
+pred = λm. fst (m ss zz)
 
+-- Minus
+- = λm. λn. n pred m
+
+-- Number equality check
 eqN = λm. λn. && (is0 (- m n)) (is0 (- n m))
 
+-- Y combinator
 Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))
-fact' = λr. λn. (is0 n) 1 (* n (r (prd n)))
+
+-- Factorial
+fact' = λr. λn. (is0 n) 1 (* n (r (pred n)))
 fact = λn. Y fact' n
 
+-- Some more numbers
 2 = + 1 1
 3 = + 2 1
 4 = * 2 2
