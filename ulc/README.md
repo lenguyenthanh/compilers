@@ -4,9 +4,9 @@ An interpreter for [untyped lambda calculus](https://en.wikipedia.org/wiki/Lambd
 
 ## Features
 
-- repl
-- load programs from files
-- Some examples like: boolean, number, Y combinator and factorial
+- REPL
+- Load programs from files
+- [Example](./examples.ulc) with boolean, number, Y combinator and factorial.
 
 ![Repl example](./examples.gif)
 
