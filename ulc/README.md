@@ -6,8 +6,9 @@ An interpreter for [untyped lambda calculus](https://en.wikipedia.org/wiki/Lambd
 
 - repl
 - load programs from files
-- factorial
-- update examples
+- Some examples like: boolean, number, Y combinator and factorial
+
+![Repl example](./examples.gif)
 
 ## Architecture Overview
 
