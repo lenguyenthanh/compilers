@@ -1,0 +1,63 @@
+-- Boolean values
+-- true
+T = λx. λy. x
+-- false
+F = λx. λy. y
+
+-- Boolean operators
+! = λb. b F T
+&& = λa. λb. a b F
+|| = λa. λb. a T b
+
+-- if expression
+if = λb. λx. λy. b x y
+
+-- pair
+pair = λf. λs. λb. b f s
+fst = λp. p T
+snd = λp. p F
+
+-- numbers
+0 = λs. λz. z
+1 = λs. λz. s z
+2 = λs. λz. s (s z)
+
+-- number operations
+
+-- successor number
+succ = λn. λs. λz. s (n s z)
+
+-- Plus
++ = λa. λb. λs. λz. a s (b s z)
+-- Multiply
+* = λm. λn. m (+ n) 0
+-- Power
+^ = λm. λn. n (* m) 1
+
+-- Check a number is Zero or not
+is0 = λn. n (λx. F) T
+zz = pair 0 0
+ss = λp. pair (snd p) (+ 1 (snd p))
+
+-- previous number
+pred = λm. fst (m ss zz)
+
+-- Minus
+- = λm. λn. n pred m
+
+-- Number equality check
+eqN = λm. λn. && (is0 (- m n)) (is0 (- n m))
+
+-- Y combinator
+Y = λf.(λx.f(λy.(x x)y))(λx.f(λy.(x x)y))
+
+-- Factorial
+fact' = λr. λn. (is0 n) 1 (* n (r (pred n)))
+fact = λn. Y fact' n
+
+-- Some more numbers
+2 = + 1 1
+3 = + 2 1
+4 = * 2 2
+8 = * 4 2
+16 = ^ 2 4
