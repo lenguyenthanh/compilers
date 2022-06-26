@@ -80,3 +80,4 @@ We show the final result in de Bruijn form, which is not easy to read. I can imp
 - Coloring the output
 - Better error messages
 - Recursion scheme
+- Fully functional for repl/main
