@@ -25,7 +25,7 @@ jobs:
       run: scala-cli .github/scripts/package.sc
     - uses: actions/upload-artifact@v3
       with:
-        name: launchers
+        name: artifacts
         path: artifacts
         if-no-files-found: error
         retention-days: 2
