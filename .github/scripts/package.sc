@@ -13,8 +13,8 @@ val platformSuffix: String = {
 }
 val artifactsPath = os.Path("artifacts", os.pwd)
 val destPath =
-  if (Properties.isWin) artifactsPath / s"ls-$platformSuffix.exe"
-  else artifactsPath / s"ls-$platformSuffix"
+  if (Properties.isWin) artifactsPath / s"ulc-$platformSuffix.exe"
+  else artifactsPath / s"ulc-$platformSuffix"
 val scalaCLILauncher =
   if (Properties.isWin) "scala-cli.bat" else "scala-cli"
 
