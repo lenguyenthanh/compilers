@@ -16,8 +16,8 @@ jobs:
             artifact_name: ulc-pc-linux
             asset_name: ulc-linux
           - os: windows-latest
-            artifact_name: ulc.exe
-            asset_name: ulc-pc-win32
+            artifact_name: ulc-pc-win32.exe
+            asset_name: ulc-pc-win32.exe
           - os: macos-latest
             artifact_name: ulc-apple-darwin
             asset_name: ulc-apple
