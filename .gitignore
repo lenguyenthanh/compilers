@@ -1,5 +1,6 @@
 .bsp
 .metals
+.ammonite
 .npmrc
 .scala
 *.js

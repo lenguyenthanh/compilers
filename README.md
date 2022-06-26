@@ -1,4 +1,4 @@
-# TODO
+# README
 
 A playground where I learn about interpreters, compilers, type theory and everything that related to those.
 
