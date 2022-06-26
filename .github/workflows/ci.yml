@@ -8,8 +8,11 @@ on:
   pull_request:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ${{ matrix.OS }}
+    strategy:
+      matrix:
+        OS: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
     - uses: actions/checkout@v3
       with:
@@ -18,6 +21,14 @@ jobs:
     - uses: VirtusLab/scala-cli-setup@v0.1
     - name: Test
       run: scala-cli test ulc --cross
+    - name: Package app
+      run: scala-cli .github/scripts/package.sc
+    - uses: actions/upload-artifact@v3
+      with:
+        name: launchers
+        path: artifacts
+        if-no-files-found: error
+        retention-days: 2
   format:
     runs-on: "ubuntu-latest"
     steps:
