@@ -1,4 +1,4 @@
-//> using scala "3.1.2"
+//> using scala "3.1.3"
 
 // case class Location(val line: Int, val col: Int, val offset: Int)
 // case class Info(start: Location, end: Location)

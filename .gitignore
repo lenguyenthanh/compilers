@@ -8,3 +8,4 @@
 .scala-build
 *.build_artifacts.txt
 bin
+.ammonite
