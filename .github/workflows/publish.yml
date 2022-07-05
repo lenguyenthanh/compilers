@@ -8,18 +8,6 @@ jobs:
   publish:
     name: Publish for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: graal-ulc-pc-linux
-            asset_name: graal-ulc-linux
-          - os: windows-latest
-            artifact_name: graal-ulc-pc-win32.exe
-            asset_name: graal-ulc-pc-win32.exe
-          - os: macos-latest
-            artifact_name: graal-ulc-apple-darwin
-            asset_name: graal-ulc-apple
 
     steps:
     - uses: actions/checkout@v3
@@ -31,7 +19,6 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: './artifacts/**[!(*.txt),!(*.ilk)]'
-        asset_name: ${{ matrix.asset_name }}
+        file: '/artifacts/**[!(*.txt),!(*.ilk)]'
         tag: ${{ github.ref }}
         file_glob: true
