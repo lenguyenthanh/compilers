@@ -12,14 +12,14 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: ulc-pc-linux
-            asset_name: ulc-linux
+            artifact_name: graal-ulc-pc-linux
+            asset_name: graal-ulc-linux
           - os: windows-latest
-            artifact_name: ulc-pc-win32.exe
-            asset_name: ulc-pc-win32.exe
+            artifact_name: graal-ulc-pc-win32.exe
+            asset_name: graal-ulc-pc-win32.exe
           - os: macos-latest
-            artifact_name: ulc-apple-darwin
-            asset_name: ulc-apple
+            artifact_name: graal-ulc-apple-darwin
+            asset_name: graal-ulc-apple
 
     steps:
     - uses: actions/checkout@v3
