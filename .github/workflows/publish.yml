@@ -6,21 +6,11 @@ on:
 
 jobs:
   publish:
-    name: Publish for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Publish for ${{ matrix.OS }}
+    runs-on: ${{ matrix.OS }}
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: graal-ulc-pc-linux
-            asset_name: graal-ulc-linux
-          - os: windows-latest
-            artifact_name: graal-ulc-pc-win32.exe
-            asset_name: graal-ulc-pc-win32.exe
-          - os: macos-latest
-            artifact_name: graal-ulc-apple-darwin
-            asset_name: graal-ulc-apple
-
+        OS: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
     - uses: actions/checkout@v3
     - uses: coursier/cache-action@v6.3
@@ -31,6 +21,6 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: '/artifacts/**[!(*.txt),!(*.ilk)]'
+        file: '**[!(*.txt),!(*.ilk),!(*.pdb)]'
         tag: ${{ github.ref }}
         file_glob: true
