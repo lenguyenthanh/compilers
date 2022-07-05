@@ -27,7 +27,7 @@ os.proc(scalaCLILauncher, "package", "./ulc", "-o", destPath("graal"), "--native
   .text()
   .trim
 
-os.proc(scalaCLILauncher, "package", "./ulc", "-o", destPath("native"), "--native", "--native-version 0.4.5")
+os.proc(scalaCLILauncher, "package", "./ulc", "-o", destPath("native"), "--native", "--native-version", "0.4.5")
   .call(cwd = os.pwd)
   .out
   .text()
