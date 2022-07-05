@@ -1,6 +1,6 @@
 //> using scala "3.1.3"
-//> using lib "org.typelevel::cats-core:2.8.0"
-//> using lib "org.typelevel::cats-parse:0.3.7"
+//> using lib "org.typelevel::cats-core::2.8.0"
+//> using lib "org.typelevel::cats-parse::0.3.8"
 
 package ulc
 
@@ -8,7 +8,6 @@ import cats.*
 import cats.syntax.all.*
 import cats.instances.all.*
 import cats.data.NonEmptyList
-import scala.annotation.tailrec
 
 type Env = Map[String, Parser.Term]
 

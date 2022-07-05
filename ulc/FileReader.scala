@@ -9,7 +9,7 @@ object FileReader:
   def read(path: String): Either[String, String] =
     Try {
       val bufferedSource = Source.fromFile(path)
-      val content        = bufferedSource.getLines.map(_.strip).filter(!_.isEmpty).mkString("\n")
+      val content        = bufferedSource.getLines.filter(!_.isEmpty).mkString("\n")
       bufferedSource.close
       content
     } match {
