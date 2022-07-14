@@ -44,6 +44,8 @@ object Lexer:
   val whitespaces: P0[Unit] = P.until0(!R.wsp).void
   val location              = P.caret.map(c => Location(c.line, c.col, c.offset))
 
+  // todo don't support comments in repl
+  // or backtrack to Identifier
   val comment  = (P.string("--") *> P.until0(endOfLine) *> endOfLine).void
   val comments = comment.rep0
 
@@ -70,11 +72,11 @@ object Lexer:
       case Right("", ls) => Right(ls)
       case Right(rest, ls) =>
         val idx = str.indexOf(rest)
-        Left(s"Partial string $rest")
+        Left(s"Lexer failed: partial string $rest")
       case Left(err) =>
         val idx = err.failedAtOffset
         val lm  = LocationMap(str)
-        Left(s"Lexer failed at $idx: $err")
+        Left(s"Lexer failed at: $idx:\n$err\n${err.show}")
 
   extension [T](p: P[T])
     def info: P[(T, Info)] = (location.with1 ~ p ~ location).map { case ((s, t), e) => (t, Info(s, e)) }
@@ -264,10 +266,8 @@ class Interpreter:
       t  <- Parser.parse(Parser.line)(ts)
     yield t
     r match
-      case Left(str) =>
-        s"Parse Error: $str"
-      case Right(line) =>
-        eval(line)
+      case Left(str)   => str
+      case Right(line) => eval(line)
 
   def eval(line: Term | Stmt): String =
     line match

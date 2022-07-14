@@ -2,7 +2,7 @@
 
 An interpreter for [untyped lambda calculus](https://en.wikipedia.org/wiki/Lambda_calculus) (ulc) with some extended grammars implemented in Scala 3. I added some extended syntax to make it easier to use (for example let binding or \ can be used instead of λ). You can check the formal grammar definition [here](./grammar.md)
 
-## Try
+## Run Locally
 
 If you want to try it locally, the fastest way it is go to [releases](https://github.com/lenguyenthanh/compilers/releases) page and download the binary file that works for your platform.
 

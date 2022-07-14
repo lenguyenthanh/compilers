@@ -20,7 +20,7 @@ jobs:
     - uses: coursier/cache-action@v6.3
     - uses: VirtusLab/scala-cli-setup@v0.1
     - name: Test
-      run: scala-cli test ulc --cross
+      run: scala-cli test ulc
     - name: Package app
       run: scala-cli .github/scripts/package.sc
     - uses: actions/upload-artifact@v3
