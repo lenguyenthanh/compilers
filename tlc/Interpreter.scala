@@ -4,6 +4,6 @@
 
 package tlc
 
-enum Ty:
+enum Type:
   case Bool
-  case Arr(input: Ty, output: Ty)
+  case Arrow(input: Type, output: Type)
