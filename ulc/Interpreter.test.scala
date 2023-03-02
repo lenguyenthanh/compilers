@@ -1,6 +1,6 @@
-//> using scala "3.2.0"
+//> using scala "3.2.2"
 //> using lib "org.typelevel::cats-core:2.9.0"
-//> using lib "org.scalameta::munit::0.7.27"
+//> using lib "org.scalameta::munit::0.7.29"
 
 package ulc
 
