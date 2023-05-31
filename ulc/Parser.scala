@@ -1,4 +1,4 @@
-//> using scala "3.2.2"
+//> using scala "3.3.0"
 //> using lib "org.typelevel::cats-core::2.9.0"
 
 package parser
