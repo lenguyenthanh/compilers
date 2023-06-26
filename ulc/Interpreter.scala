@@ -1,6 +1,6 @@
 //> using scala "3.3.0"
 //> using lib "org.typelevel::cats-core::2.9.0"
-//> using lib "org.typelevel::cats-parse::0.3.9"
+//> using lib "org.typelevel::cats-parse::0.3.10"
 
 package ulc
 
