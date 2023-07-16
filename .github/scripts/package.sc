@@ -1,5 +1,5 @@
 //> using scala "3.3.0"
-//> using lib "com.lihaoyi::os-lib:0.9.0"
+//> using lib "com.lihaoyi::os-lib:0.9.1"
 
 import scala.util.Properties
 
@@ -27,7 +27,7 @@ os.proc(scalaCLILauncher, "package", "./ulc", "-o", destPath("graal"), "--native
   .text()
   .trim
 
-os.proc(scalaCLILauncher, "package", "./ulc", "-o", destPath("native"), "--native", "--native-version", "0.4.7")
+os.proc(scalaCLILauncher, "package", "./ulc", "-o", destPath("native"), "--native", "--native-version", "0.4.14")
   .call(cwd = os.pwd)
   .out
   .text()
