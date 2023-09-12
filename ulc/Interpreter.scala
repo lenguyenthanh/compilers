@@ -1,4 +1,4 @@
-//> using scala "3.3.0"
+//> using scala "3.3.1"
 //> using lib "org.typelevel::cats-core::2.10.0"
 //> using lib "org.typelevel::cats-parse::0.3.10"
 
