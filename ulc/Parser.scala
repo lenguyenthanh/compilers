@@ -1,5 +1,5 @@
 //> using scala "3.3.1"
-//> using lib "org.typelevel::cats-core::2.10.0"
+//> using lib "org.typelevel::cats-core::2.12.0"
 
 package parser
 
