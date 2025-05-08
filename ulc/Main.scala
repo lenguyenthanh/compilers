@@ -1,4 +1,4 @@
-//> using scala "3.3.1"
+//> using scala "3.3.6"
 
 package ulc
 
