@@ -70,7 +70,7 @@ object Parser:
   }
 
   extension [A, B](p: Parser[A, B])
-    def many: Parser[A, List[B]] = many1.map(_.toList) | Parser.unit[A, List[B]](Nil)
+    def many: Parser[A, List[B]]          = many1.map(_.toList) | Parser.unit[A, List[B]](Nil)
     def many1: Parser[A, NonEmptyList[B]] =
       for
         first <- p
