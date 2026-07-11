@@ -67,7 +67,7 @@ object Lexer:
 
   def scan(str: String): Either[String, List[Token]] =
     parser.parse(str) match
-      case Right("", ls) => Right(ls)
+      case Right("", ls)   => Right(ls)
       case Right(rest, ls) =>
         val idx = str.indexOf(rest)
         Left(s"Partial string $rest")
@@ -141,8 +141,8 @@ object Parser:
 
   def collapse(ts: NonEmptyList[Term]): Term =
     ts match
-      case NonEmptyList(head, Nil)      => head
-      case NonEmptyList(head, x :: Nil) => App(head.info.merge(x.info), head, x)
+      case NonEmptyList(head, Nil)          => head
+      case NonEmptyList(head, x :: Nil)     => App(head.info.merge(x.info), head, x)
       case NonEmptyList(head, x :: y :: xs) =>
         App(mergeInfo(ts), App(head.info.merge(x.info), head, x), collapse(NonEmptyList(y, xs)))
 
@@ -162,14 +162,14 @@ object DeBruijn:
   import scala.collection.mutable.ListBuffer
 
   def transform(env: Env, free: List[String]): Term => BTerm =
-    val localFree = ListBuffer.from(free)
+    val localFree                            = ListBuffer.from(free)
     def go(ctx: List[String]): Term => BTerm =
       case Var(fi, x) =>
         val idx = ctx.indexOf(x)
         if idx == -1 then
           env.get(x) match
             case Some(term) => transform(env, localFree.toList)(term)
-            case None =>
+            case None       =>
               val freeIdx = localFree.indexOf(x)
               if freeIdx == -1 then
                 localFree += x
@@ -228,7 +228,7 @@ object Evaluation:
     if count > 100000 then None
     else
       eval(env, term) match
-        case BAbs(t) => norm(env, t, count + 1).map(BAbs(_))
+        case BAbs(t)      => norm(env, t, count + 1).map(BAbs(_))
         case BApp(t1, t2) =>
           for
             t11 <- norm(env, t1, count + 1)
