@@ -51,7 +51,7 @@ class UlcSuite extends munit.FunSuite:
 
   test("Factorial") {
     val interpreter = Interpreter()
-    val input = List(
+    val input       = List(
       "T = λx. λy. x",
       "F = λx. λy. y",
       "0 = λf. λx. x",
@@ -82,8 +82,8 @@ class UlcSuite extends munit.FunSuite:
     assertEquals(f2, two)
   }
 
-  val lineParser = Parser.parse(Parser.line)
-  val termParser = Parser.parse(Parser.app)
+  val lineParser       = Parser.parse(Parser.line)
+  val termParser       = Parser.parse(Parser.app)
   def parse(x: String) =
     for
       ts <- Lexer.scan(x)
